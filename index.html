@@ -1,0 +1,2164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a1628">
+<meta name="description" content="長崎県主要エリアの潮汐・天気・まずめをまとめて確認できる釣行計画支援ツール">
+<title>長崎 釣れどきナビ β版｜潮汐・天気・釣行計画</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif; background:#0a1628; color:#e8f4fd; min-height:100vh; padding-bottom:env(safe-area-inset-bottom); -webkit-font-smoothing:antialiased; }
+
+header { background:linear-gradient(135deg,#0d2137,#0a3d62); padding:14px 18px 8px; border-bottom:1px solid #1a4a6e; }
+.hdr-top { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+.hdr-top h1 { font-size:1.15rem; font-weight:700; }
+.hdr-top .sub { font-size:0.72rem; color:#7eb8d4; margin-top:2px; }
+.fish-icon { font-size:1.7rem; }
+.beta-notice { background:#071525; border-left:3px solid #f39c12; padding:8px 12px; border-radius:6px; font-size:0.7rem; color:#aed6f1; line-height:1.4; }
+.beta-notice b { color:#f39c12; }
+
+/* 天気カード内スクロール */
+.wstrip-scroll { overflow-x:auto; scrollbar-width:thin; margin:0 -14px; padding:0 14px; }
+.wstrip-inner { display:flex; min-width:max-content; gap:0; }
+.wh { display:flex; flex-direction:column; align-items:center; padding:7px 9px; min-width:52px; border-right:1px solid #0f2a3d; font-size:0.63rem; }
+.wh.now { background:#0f2a3d; border-radius:6px; }
+.wh .wt { color:#7eb8d4; }
+.wh .wi { font-size:1.1rem; margin:2px 0; }
+.wh .wc { color:#fff; font-weight:600; }
+.wh .ww { color:#aed6f1; }
+.wh .wr { color:#7dccff; }
+
+/* 魚種セレクター */
+.fish-selector-title { font-size:.82rem; color:#aed6f1; margin-bottom:10px; }
+.fish-btns { display:flex; gap:8px; flex-wrap:wrap; }
+.fish-btn {
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:10px 14px; border-radius:12px; border:2px solid #1a4a6e;
+  background:#071525; color:#aed6f1; font-size:.78rem; cursor:pointer;
+  transition:.15s; min-width:62px;
+}
+.fish-btn .fb-icon { font-size:1.5rem; line-height:1; }
+.fish-btn .fb-label { font-size:.7rem; font-weight:700; }
+.fish-btn:hover { border-color:#2980b9; background:#0d2137; }
+.fish-btn.active { background:#0d3a5a; border-color:#2ecc71; color:#7dffb3; }
+.fish-btn.active .fb-label { color:#7dffb3; }
+.fish-selected-msg { margin-top:10px; font-size:.75rem; color:#7dffb3; background:#071525; border-radius:8px; padding:7px 11px; border-left:3px solid #2ecc71; display:none; line-height:1.4; }
+.fish-selected-msg.show { display:block; }
+
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; padding:14px; max-width:960px; margin:0 auto; }
+@media(max-width:600px){.grid{grid-template-columns:1fr;}}
+.card { background:#0d2137; border:1px solid #1a4a6e; border-radius:14px; padding:14px; }
+.full { grid-column:1/-1; }
+.card-title { font-size:0.75rem; color:#7eb8d4; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; font-weight:700;}
+
+/* Score */
+.score-card { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+.snum { font-size:1.9rem; font-weight:800; line-height:1; }
+.slabel { font-size:.58rem; color:#7eb8d4; }
+.sdetails { flex:1; min-width:170px; }
+.stitle { font-size:.95rem; font-weight:700; margin-bottom:5px; }
+.scomment { font-size:.8rem; color:#aed6f1; line-height:1.5; background:#071525; border-radius:9px; padding:7px 11px; border-left:3px solid #2980b9; }
+.badges { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:18px; font-size:.75rem; font-weight:700; }
+.b-up{background:#1a6e3c;color:#7dffb3;} .b-dn{background:#6e3a1a;color:#ffb07d;} .b-slack{background:#3a3a1a;color:#ffd97d;}
+.b-spring{background:#6e1a1a;color:#ffcccc;} .b-mid{background:#4a3a1a;color:#ffcc7d;} .b-neap{background:#1a3a6e;color:#7dccff;} .b-longcho{background:#2a2a2a;color:#aaa;}
+.b-weather{background:#0d2845;color:#aed6f1;border:1px solid #1a4a6e;} .b-wind-bad{background:#3d1a1a;color:#ff9d9d;border-color:#6e2a2a;}
+
+/* 出発アドバイス */
+.depart-list { display:flex; flex-direction:column; gap:5px; }
+.da-item { background:#071525; border-radius:10px; overflow:hidden; border:1px solid #1a4a6e; transition:border-color .15s; }
+.da-item.great { border-color:#2ecc71; }
+.da-item.so-so  { border-color:#f39c12; }
+.da-row { display:flex; align-items:center; gap:8px; padding:10px 13px; cursor:pointer; user-select:none; }
+.da-row:hover { background:#0f2a3d; }
+.da-rank { font-size:.8rem; flex-shrink:0; min-width:22px; }
+.da-name { font-size:.9rem; font-weight:700; color:#fff; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.da-score-badge { font-size:.8rem; font-weight:800; padding:3px 9px; border-radius:10px; flex-shrink:0; }
+.da-score-badge.great { background:#1a4a2e; color:#7dffb3; }
+.da-score-badge.so-so  { background:#4a3a1a; color:#ffcc7d; }
+.da-score-badge.norm  { background:#1a3a55; color:#7dccff; }
+.da-depart-txt { font-size:.75rem; color:#aed6f1; flex-shrink:0; text-align:right; max-width:90px; line-height:1.3; }
+.da-chevron { font-size:.65rem; color:#3a6a8a; flex-shrink:0; transition:transform .2s; }
+.da-item.open .da-chevron { transform:rotate(180deg); }
+.da-detail { display:none; padding:10px 13px 13px; border-top:1px solid #0f2a3d; }
+.da-item.open .da-detail { display:block; }
+.da-drive { font-size:.75rem; color:#7eb8d4; margin-bottom:6px; }
+.da-advice-main { font-size:.82rem; color:#7dffb3; font-weight:600; line-height:1.4; margin-bottom:3px; }
+.da-advice-sub { font-size:.73rem; color:#aed6f1; line-height:1.4; }
+.da-compare { font-size:.7rem; color:#aed6f1; margin-top:4px; }
+.da-fish { font-size:.68rem; color:#f39c12; margin-top:6px; }
+
+/* 明日ベスト */
+.tomorrow-item { background:#071525; border-radius:9px; padding:9px 11px; margin-bottom:7px; border-left:3px solid #2ecc71; }
+.ti-time { font-size:.92rem; font-weight:700; }
+.ti-score { float:right; font-size:.78rem; background:#1a4a2e; color:#7dffb3; padding:2px 7px; border-radius:9px; }
+.ti-reason { font-size:.72rem; color:#aed6f1; margin-top:3px; }
+
+/* 土日プランナー */
+.weekend-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.weekend-day { background:#071525; border-radius:9px; padding:9px 10px; border:1px solid #0f2a3d; }
+.weekend-day.sat { border-top:3px solid #2980b9; }
+.weekend-day.sun { border-top:3px solid #e74c3c; }
+.wd-label { font-size:.68rem; color:#7eb8d4; margin-bottom:4px; }
+.wd-date { font-size:.82rem; font-weight:700; color:#fff; }
+.wd-ttype { font-size:.65rem; padding:1px 6px; border-radius:8px; display:inline-block; margin:3px 0; }
+.wd-best { font-size:.8rem; color:#7dffb3; font-weight:600; }
+.wd-score { font-size:.72rem; color:#f39c12; }
+.wd-reason { font-size:.68rem; color:#aed6f1; margin-top:2px; line-height:1.35; }
+.weekend-section { margin-bottom:10px; }
+.weekend-header { font-size:.75rem; color:#7eb8d4; margin-bottom:5px; font-weight:600; }
+
+/* 干満表 */
+.tide-row { display:flex; align-items:center; justify-content:space-between; padding:5px 0; border-bottom:1px solid #0f2a3d; font-size:.8rem; }
+.tide-row:last-child{border-bottom:none;} .tide-row .tm{color:#fff;font-weight:600;} .tide-row .tp{color:#7eb8d4;} .tide-row .th{color:#7dccff;font-weight:700;}
+.tide-row.next{background:#0f2a3d;margin:0 -8px;padding:5px 8px;border-radius:6px;} .tide-row.next .tm{color:#7dffb3;}
+
+/* おすすめ時間帯 */
+.win-item { background:#071525; border-radius:9px; padding:9px 11px; margin-bottom:7px; border-left:4px solid #2ecc71; }
+.win-item.ok{border-left-color:#f39c12;} .win-time{font-size:.88rem;font-weight:700;} .win-reason{font-size:.72rem;color:#aed6f1;margin-top:3px;}
+.win-score{float:right;font-size:.77rem;font-weight:700;padding:2px 7px;border-radius:9px;background:#1a4a2e;color:#7dffb3;}
+.win-score.ok{background:#4a3a1a;color:#ffcc7d;}
+
+/* スコア内訳 */
+.bd-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.bd-label{font-size:.76rem;color:#aed6f1;} .bd-bar-w{width:75px;height:5px;background:#1a3a55;border-radius:3px;overflow:hidden;}
+.bd-bar{height:100%;border-radius:3px;background:#2980b9;transition:width 1s;}
+.bd-pts{font-size:.76rem;font-weight:700;color:#7dccff;min-width:38px;text-align:right;}
+
+/* 天気3日 */
+.fc-day{flex:1;min-width:90px;background:#071525;border-radius:11px;padding:10px 8px;text-align:center;border:1px solid #0f2a3d;}
+.fc-day.today{border-color:#2980b9;} .fd-date{font-size:.68rem;color:#7eb8d4;margin-bottom:3px;} .fd-icon{font-size:1.7rem;margin:3px 0;}
+.fd-desc{font-size:.65rem;color:#aed6f1;margin-bottom:5px;} .fd-temps{font-size:.8rem;font-weight:700;} .fd-max{color:#ff9d7d;} .fd-min{color:#7dccff;}
+.fd-wind{font-size:.68rem;color:#aed6f1;margin-top:3px;} .fd-rain{font-size:.68rem;color:#7dccff;margin-top:2px;}
+.fd-fish{margin-top:6px;font-size:.68rem;padding:2px 7px;border-radius:7px;display:inline-block;}
+.fish-good{background:#1a4a2e;color:#7dffb3;} .fish-ok{background:#4a3a1a;color:#ffcc7d;} .fish-bad{background:#3d1a1a;color:#ff9d9d;}
+
+/* 出発地点入力 */
+.loc-input-row { display:flex; gap:6px; margin-bottom:10px; }
+.loc-input { flex:1; background:#071525; border:1px solid #1a4a6e; border-radius:10px; padding:8px 12px; color:#e8f4fd; font-size:.82rem; outline:none; }
+.loc-input:focus { border-color:#2980b9; }
+.loc-btn { padding:7px 12px; border-radius:10px; border:none; cursor:pointer; font-size:.78rem; font-weight:700; white-space:nowrap; transition:.15s; }
+.loc-btn-search { background:#2980b9; color:#fff; }
+.loc-btn-gps { background:#1a6e3c; color:#7dffb3; }
+.loc-result { font-size:.73rem; color:#7eb8d4; margin-bottom:8px; min-height:1.2em; }
+
+/* Map */
+.map-card{padding:0;overflow:hidden;} .map-hdr{padding:11px 14px;border-bottom:1px solid #1a4a6e;}
+.map-body{display:flex;height:420px;}
+#map{flex:1;min-width:0;height:100%;}
+.spot-panel{width:270px;background:#071525;border-left:1px solid #1a4a6e;overflow-y:auto;display:flex;flex-direction:column;}
+.spot-panel-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#3a6a8a;font-size:.78rem;line-height:1.6;}
+.sp-content{padding:12px;flex:1;}
+.sp-name{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:2px;}
+.sp-area{font-size:.68rem;color:#7eb8d4;margin-bottom:8px;}
+.sp-fish{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
+.sp-fish span{background:#1a4a2e;color:#7dffb3;border-radius:8px;padding:2px 7px;font-size:.68rem;}
+.sp-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;}
+.sp-tags span{background:#0f2a3d;color:#aed6f1;border-radius:8px;padding:2px 7px;font-size:.65rem;}
+.sp-tide-txt{font-size:.76rem;color:#aed6f1;line-height:1.45;background:#0a1e30;border-radius:8px;padding:7px 9px;margin-bottom:8px;border-left:3px solid #2980b9;}
+.sp-drive-row{font-size:.75rem;color:#7eb8d4;margin-bottom:5px;}
+.sp-advice-box{background:#071525;border:1px solid #1a6e3c;border-radius:9px;padding:8px 10px;margin-bottom:8px;}
+.sp-advice-main{font-size:.82rem;font-weight:700;color:#7dffb3;line-height:1.4;}
+.sp-advice-sub{font-size:.72rem;color:#aed6f1;margin-top:3px;line-height:1.4;}
+.sp-advice-box.warn{border-color:#6e3a1a;}
+.sp-advice-box.warn .sp-advice-main{color:#ffb07d;}
+.sp-gmaps-btn{display:block;text-align:center;background:#1a73e8;color:#fff;border-radius:9px;padding:8px;font-size:.78rem;font-weight:700;text-decoration:none;margin-top:4px;}
+.sp-addr{display:flex;align-items:center;gap:6px;margin:4px 0 6px;flex-wrap:wrap;}
+.sp-addr-txt{font-size:.72rem;color:#7dccff;flex:1;user-select:text;-webkit-user-select:text;}
+.sp-copy-btn{background:#0e3050;border:1px solid #2a6a9a;color:#7dccff;border-radius:6px;padding:3px 8px;font-size:.68rem;cursor:pointer;white-space:nowrap;}
+.sp-copy-btn:active{background:#1a73e8;color:#fff;}
+@media(max-width:700px){
+  .map-body{flex-direction:column;height:auto;}
+  #map{height:300px;}
+  .spot-panel{width:100%;height:260px;border-left:none;border-top:1px solid #1a4a6e;}
+}
+
+/* 初心者向けカード */
+.now-status-big { display:flex; align-items:center; gap:16px; margin-bottom:14px; flex-wrap:wrap; }
+.now-emoji { font-size:3.2rem; line-height:1; flex-shrink:0; }
+.now-title { font-size:1.1rem; font-weight:800; margin-bottom:4px; }
+.now-desc { font-size:.85rem; color:#aed6f1; line-height:1.6; }
+
+.hour-bar { display:flex; gap:2px; margin-bottom:6px; }
+.hour-block { flex:1; height:28px; border-radius:3px; position:relative; cursor:default; transition:.1s; }
+.hour-block .hb-label { position:absolute; bottom:-16px; left:50%; transform:translateX(-50%); font-size:.55rem; color:#3a6a8a; white-space:nowrap; }
+.hour-block.now-block { outline:2px solid #2ecc71; outline-offset:1px; border-radius:4px; }
+.hbar-wrap { padding-bottom:20px; margin-bottom:4px; }
+.hbar-legend { display:flex; gap:12px; margin-top:4px; }
+.hbar-leg { display:flex; align-items:center; gap:4px; font-size:.68rem; color:#7eb8d4; }
+.hbar-dot { width:10px; height:10px; border-radius:2px; }
+
+.best-times { display:flex; flex-direction:column; gap:8px; }
+.bt-item { background:#071525; border-radius:12px; padding:12px 14px; display:flex; align-items:flex-start; gap:12px; }
+.bt-item.rank1 { border:1px solid #2ecc71; }
+.bt-item.rank2 { border:1px solid #1a4a6e; }
+.bt-item.rank3 { border:1px solid #1a3a55; }
+.bt-rank { font-size:1.4rem; flex-shrink:0; line-height:1; }
+.bt-time { font-size:1rem; font-weight:800; color:#fff; margin-bottom:3px; }
+.bt-reason { font-size:.8rem; color:#aed6f1; line-height:1.5; }
+.bt-reason b { color:#7dffb3; }
+
+/* 日付ナビ */
+.date-nav { display:flex; align-items:center; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+.date-nav-arrow { background:#071525; border:1px solid #1a4a6e; color:#aed6f1; border-radius:8px; padding:5px 12px; font-size:1rem; cursor:pointer; }
+.date-nav-label { font-size:.9rem; font-weight:700; color:#fff; flex:1; text-align:center; min-width:130px; }
+.date-chips { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.date-chip { padding:4px 10px; border-radius:12px; border:1px solid #1a4a6e; background:#071525; color:#aed6f1; font-size:.72rem; cursor:pointer; }
+.date-chip.active { background:#2980b9; border-color:#2980b9; color:#fff; font-weight:700; }
+/* カレンダーピッカーボタン */
+.date-cal-btn { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:12px; border:1px solid #1a4a6e; background:#071525; color:#7eb8d4; font-size:.72rem; cursor:pointer; transition:.15s; }
+.date-cal-btn:hover { border-color:#2980b9; color:#aed6f1; }
+.date-cal-btn.has-custom { border-color:#9b59b6; color:#cf9ef7; background:#1a0a2e; }
+#date-picker-input { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
+/* カレンダーポップオーバー */
+.date-popover { position:absolute; z-index:1000; background:#0d2137; border:1px solid #1a4a6e; border-radius:14px; padding:16px; box-shadow:0 8px 32px rgba(0,0,0,.6); min-width:280px; display:none; }
+.date-popover.open { display:block; }
+.dp-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.dp-month-label { font-size:.9rem; font-weight:700; color:#fff; }
+.dp-arrow { background:none; border:1px solid #1a4a6e; color:#aed6f1; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:.85rem; }
+.dp-arrow:hover { border-color:#2980b9; }
+.dp-weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.65rem; color:#3a6a8a; margin-bottom:4px; font-weight:700; }
+.dp-days { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.dp-day { border:none; border-radius:8px; padding:6px 2px; font-size:.78rem; cursor:pointer; background:none; color:#aed6f1; transition:.1s; text-align:center; line-height:1.2; }
+.dp-day:hover:not(:disabled) { background:#1a3a5a; }
+.dp-day.today { color:#7dffb3; font-weight:700; }
+.dp-day.selected { background:#2980b9; color:#fff; font-weight:700; }
+.dp-day.past { color:#2a4a5a; cursor:default; }
+.dp-day.out { color:#1a3a4a; cursor:default; }
+.dp-day:disabled { cursor:default; }
+.dp-day .dp-score { font-size:.55rem; color:#5a8aaa; }
+.dp-day.today .dp-score { color:#2ecc71; }
+.dp-close-row { text-align:center; margin-top:10px; }
+.dp-close { font-size:.72rem; color:#3a6a8a; cursor:pointer; padding:4px 16px; border-radius:8px; border:1px solid #1a4a6e; background:none; }
+.dp-close:hover { border-color:#e74c3c; color:#e74c3c; }
+.dp-wrap { position:relative; display:inline-block; }
+
+/* Curve */
+#tide-canvas{width:100%;height:210px;display:block;}
+.win-item{cursor:pointer;transition:border-left-color .15s,background .15s;}
+.win-item:hover{background:#0d2137;}
+.win-item.selected{border-left-color:#fff;background:#0f2a3d;box-shadow:0 0 0 1px rgba(255,255,255,.15);}
+.tide-legend{display:flex;gap:0;margin-bottom:6px;border-radius:6px;overflow:hidden;font-size:.73rem;font-weight:700;}
+.tide-legend-tide{flex:1;background:#1a4a7a;color:#7dccff;text-align:center;padding:4px 0;}
+.tide-legend-bi{flex:1;background:#7a5800;color:#f1c40f;text-align:center;padding:4px 0;}
+
+.section-hdr { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+.section-hdr .card-title { margin:0; }
+.date-nav { margin:0; }
+
+.score-compact { display:flex; gap:16px; align-items:flex-start; padding:0 0 14px; border-bottom:1px solid #1a4a6e; margin-bottom:14px; }
+.score-compact-num { flex-shrink:0; text-align:center; min-width:76px; }
+.score-compact-num .snum { font-size:3rem; font-weight:900; line-height:1; display:block; }
+.score-bar { width:100%; height:6px; background:#1a3a55; border-radius:3px; margin-top:7px; overflow:hidden; }
+.score-bar-fill { height:100%; border-radius:3px; width:0%; transition:width 1.2s; }
+.score-compact-info { flex:1; min-width:0; }
+
+.detail-toggle-btn { width:100%; background:none; border:none; color:#7eb8d4; font-size:.82rem; cursor:pointer; text-align:left; padding:0; font-family:inherit; display:flex; justify-content:space-between; align-items:center; line-height:1.4; }
+.detail-arrow { font-size:.72rem; color:#3a6a8a; background:#071525; padding:3px 8px; border-radius:8px; border:1px solid #1a4a6e; }
+
+
+.data-health { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.health-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid #1a4a6e; background:#071525; color:#7eb8d4; border-radius:999px; padding:4px 9px; font-size:.66rem; line-height:1.2; }
+.health-pill.ok { border-color:#1a6e3c; color:#7dffb3; }
+.health-pill.warn { border-color:#6e3a1a; color:#ffcc7d; }
+.health-pill.bad { border-color:#6e2a2a; color:#ff9d9d; }
+.source-note { font-size:.64rem; color:#5f8da5; line-height:1.55; margin-top:7px; }
+.data-limit-note { display:none; margin-top:8px; padding:7px 10px; border-radius:8px; background:#2b2310; border-left:3px solid #f39c12; color:#ffdc91; font-size:.7rem; line-height:1.45; }
+.data-limit-note.show { display:block; }
+button, input { font:inherit; }
+button { -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline:3px solid rgba(125,204,255,.75); outline-offset:2px; }
+.da-row { width:100%; border:0; color:inherit; background:transparent; text-align:left; font-family:inherit; }
+.map-fallback { height:100%; min-height:260px; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#7eb8d4; background:#071525; line-height:1.6; }
+@media(max-width:600px){
+  header{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));}
+  .grid{padding:10px;gap:9px;}
+  .card{padding:12px;border-radius:12px;}
+  .section-hdr{align-items:stretch;}
+  .section-hdr>.card-title{width:100%;}
+  .date-nav{width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:7px;}
+  .date-chips{grid-column:1/-1;grid-row:2;justify-content:center;}
+  .date-nav-label{grid-column:2;grid-row:1;min-width:0;align-self:center;}
+  .date-nav-arrow:first-child{grid-column:1;grid-row:1;}
+  .date-nav-arrow:last-child{grid-column:3;grid-row:1;}
+  .date-nav-arrow,.date-chip,.date-cal-btn{min-height:38px;}
+  .score-compact{gap:12px;}
+  .score-compact-num{min-width:64px;}
+  .score-compact-num .snum{font-size:2.55rem;}
+  .now-status-big{gap:11px;align-items:flex-start;}
+  .now-emoji{font-size:2.5rem;}
+  .loc-input-row{flex-wrap:wrap;}
+  .loc-input{flex-basis:100%;min-height:44px;}
+  .loc-btn{flex:1;min-height:42px;}
+  .da-row{padding:10px 9px;gap:6px;}
+  .da-depart-txt{max-width:78px;font-size:.68rem;}
+  .weekend-grid{grid-template-columns:1fr;}
+  #detail-section>div[style*="grid-template-columns"]{grid-template-columns:1fr!important;}
+}
+@media(prefers-reduced-motion:reduce){ *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;} }
+footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));font-size:.65rem;color:#3a6a8a; line-height:1.5;}
+.loading-text{font-size:.73rem;color:#3a6a8a;font-style:italic;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-top">
+    <div class="fish-icon">🎣</div>
+    <div>
+      <h1>長崎 釣れどきナビ β版</h1>
+      <div class="sub" id="now-time-hdr">読み込み中...</div>
+    </div>
+  </div>
+  <div class="beta-notice">
+    <b>【長崎県主要エリア対応 β版】</b><br>
+    長崎市・佐世保・平戸の潮汐は気象庁の潮位予測データを使用しています。茂木・戸町・樺島・小浜は長崎港を参考地点とし、大村湾は佐世保港の予測値に簡易補正を適用しています。「釣れどき指数」は独自の参考指数で、釣果を保証するものではありません。実際の潮・風・波・立入可否は現地でご確認ください。
+  </div>
+  <div class="data-health" aria-live="polite" aria-label="データ取得状況">
+    <span class="health-pill" id="tide-health">🌊 潮汐：読み込み中</span>
+    <span class="health-pill" id="weather-health">⛅ 天気：読み込み中</span>
+    <span class="health-pill ok" id="map-health">🗺️ 地図：準備中</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <div class="card full" id="weather-card">
+    <div class="section-hdr">
+      <span class="card-title" id="weather-title">⛅ 長崎市周辺の天気予報</span>
+      <div class="date-nav">
+        <button class="date-nav-arrow" onclick="shiftDay(-1)">◀</button>
+        <div class="date-chips">
+          <button class="date-chip" id="chip-0" onclick="jumpDay(0)">今日</button>
+          <button class="date-chip" id="chip-1" onclick="jumpDay(1)">明日</button>
+          <button class="date-chip" id="chip-2" onclick="jumpDay(2)">明後日</button>
+          <div class="dp-wrap">
+            <button class="date-cal-btn" id="cal-btn" onclick="toggleCalendar()" title="日付を選ぶ">📅 日付</button>
+            <div class="date-popover" id="date-popover">
+              <div class="dp-header">
+                <button class="dp-arrow" onclick="dpShiftMonth(-1)">◀</button>
+                <div class="dp-month-label" id="dp-month-label"></div>
+                <button class="dp-arrow" onclick="dpShiftMonth(1)">▶</button>
+              </div>
+              <div class="dp-weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+              <div class="dp-days" id="dp-days"></div>
+              <div class="dp-close-row">
+                <button class="dp-close" onclick="toggleCalendar()">閉じる</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="date-nav-label" id="date-nav-label">--</div>
+        <button class="date-nav-arrow" onclick="shiftDay(1)">▶</button>
+      </div>
+    </div>
+    <div class="wstrip-scroll">
+      <div class="wstrip-inner" id="wstrip" aria-live="polite"><div style="padding:10px 4px;font-size:.73rem;color:#3a6a8a">天気データ取得中...</div></div>
+    </div>
+    <div id="fc-days" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;"></div>
+    <div class="data-limit-note" id="forecast-limit-note"></div>
+    <div style="font-size:.62rem;color:#3a6a8a;margin-top:8px;">※天気はOpen-Meteo予測値です。予報期間外は潮汐・日の出入り中心の参考指数になります。</div>
+  </div>
+
+  <div class="card full" id="forecast-main-card">
+    <div class="card-title" id="beginner-card-title">🎣 今日の釣り予報</div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:.72rem;color:#7eb8d4;margin-bottom:6px;">📍 予報エリア選択</div>
+      <div id="area-selector" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="score-compact">
+      <div class="score-compact-num">
+        <span class="snum" id="snum">--</span><span class="slabel">点</span>
+        <div class="score-bar"><div class="score-bar-fill" id="score-bar-fill"></div></div>
+      </div>
+      <div class="score-compact-info">
+        <div class="stitle" id="stitle">計算中...</div>
+        <div class="scomment" id="scomment" style="margin:6px 0">データ読み込み中</div>
+        <div class="badges">
+          <span class="badge b-up" id="tide-badge">-- 潮</span>
+          <span class="badge b-spring" id="ttype-badge">潮回り</span>
+          <span class="badge b-weather" id="wx-badge" style="display:none"></span>
+          <span style="font-size:.73rem;color:#7eb8d4;align-self:center" id="tide-ht">潮位--m</span>
+        </div>
+      </div>
+    </div>
+    <div class="now-status-big" id="now-status-big"></div>
+    <div class="hbar-wrap">
+      <div class="hour-bar" id="hour-bar"></div>
+      <div class="hbar-legend">
+        <div class="hbar-leg"><div class="hbar-dot" style="background:#2ecc71"></div>釣れやすい</div>
+        <div class="hbar-leg"><div class="hbar-dot" style="background:#f39c12"></div>まあまあ</div>
+        <div class="hbar-leg"><div class="hbar-dot" style="background:#2c4a6a"></div>釣れにくい</div>
+      </div>
+    </div>
+    <div class="best-times" id="best-times-list"></div>
+  </div>
+
+  <div class="card full">
+    <button class="detail-toggle-btn" id="detail-toggle" onclick="toggleDetails()" aria-expanded="true" aria-controls="detail-section">
+      <span>📊 詳細データ（潮位グラフ・干満表・スコア内訳）</span>
+      <span class="detail-arrow" id="detail-arrow">▲ 閉じる</span>
+    </button>
+    <div id="detail-section" style="display:block;padding-top:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+        <div class="card-title" style="margin:0">🌊 潮位グラフ <span id="tide-area-label" style="font-size:.65rem;color:#7eb8d4;font-weight:400;text-transform:none;">※長崎港基準</span></div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button onclick="shiftDay(-1)" style="background:rgba(255,255,255,.08);border:none;color:#7dccff;font-size:1rem;padding:2px 9px;border-radius:6px;cursor:pointer;">◀</button>
+          <span id="detail-date-label" style="font-size:.82rem;color:#7dccff;font-weight:700;min-width:120px;text-align:center;"></span>
+          <button onclick="shiftDay(1)" style="background:rgba(255,255,255,.08);border:none;color:#7dccff;font-size:1rem;padding:2px 9px;border-radius:6px;cursor:pointer;">▶</button>
+        </div>
+      </div>
+      <div class="tide-legend">
+        <div class="tide-legend-tide">🌊 潮汐</div>
+        <div class="tide-legend-bi">⭐ 釣れどき指数</div>
+      </div>
+      <canvas id="tide-canvas"></canvas>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px;">
+        <div>
+          <div class="card-title">干満表 <span id="tide-table-label" class="tide-table-label">(読込中...)</span></div>
+          <div id="tide-table"></div>
+        </div>
+        <div>
+          <div class="card-title">おすすめ時間帯</div>
+          <div id="win-list"></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="card-title">スコア内訳</div>
+        <div id="bd-rows"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card map-card full">
+    <div class="map-hdr">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="card-title" style="margin:0">🗺️ ポイントマップ（長崎県）</div>
+        <span style="font-size:.68rem;color:#3a6a8a">← ピンをタップで詳細</span>
+      </div>
+      <div class="fish-selector-title">🎯 ターゲットで絞り込む</div>
+      <div class="fish-btns" id="fish-btns"></div>
+      <div class="fish-selected-msg" id="fish-selected-msg"></div>
+    </div>
+    <div class="map-body">
+      <div id="map" role="application" aria-label="長崎県の釣りポイント地図"></div>
+      <div class="spot-panel" id="spot-panel">
+        <div class="spot-panel-empty">🎣<br><br>地図のピンをタップすると<br>釣り場と出発アドバイスが<br>ここに表示されます</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card full">
+    <div class="card-title">🚗 出発アドバイス（概算移動時間）</div>
+    <div class="loc-input-row">
+      <input class="loc-input" id="loc-input" type="text" placeholder="出発地（例：大村市、長崎駅）" />
+      <button class="loc-btn loc-btn-search" onclick="geocodeAndRun()">🔍 検索</button>
+      <button class="loc-btn loc-btn-gps" onclick="useGPS()">📍 現在地</button>
+    </div>
+    <div class="loc-result" id="loc-result" aria-live="polite">出発地を入力するか「現在地」ボタンを押してください</div>
+    <div class="source-note">順位は地点別の潮汐・まずめを中心に計算します。移動時間は直線距離からの概算で、道路・渋滞・通行止めは反映しません。住所検索：OpenStreetMap Nominatim。</div>
+    <div class="depart-list" id="depart-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 明日のベストタイム</div>
+    <div id="tomorrow-list"><div class="loading-text">計算中...</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🗓️ 土日プランナー（4週分）</div>
+    <div id="weekend-planner"><div class="loading-text">計算中...</div></div>
+  </div>
+
+
+</div>
+
+<footer>
+  長崎 釣れどきナビ β版 🎣<br>
+  潮汐：気象庁潮位予測データ（加工）｜天気：Open-Meteo｜地図・住所検索：OpenStreetMap contributors。茂木・戸町・樺島・小浜は長崎港参考、大村湾は佐世保港の簡易補正値です。移動時間は概算です。実際の潮・風・波・立入可否は現地でご確認ください。
+</footer>
+
+<script>
+// ========================================================
+// SPOTS DATA（大村湾・西海周辺に特化・表現修正済み）
+// ========================================================
+const SPOTS = [
+  // ── アジ主力ポイント ──
+  { id:'motogi1', name:'茂木漁港', tideArea:'motogi', area:'長崎市茂木町', address:'長崎県長崎市茂木町', lat:32.708, lng:129.915,
+    fish:['アジ','チヌ','メバル','アラカブ'], tags:['漁港','夜釣り向き','常夜灯あり','アジング好実績'],
+    tide:'長崎市南東の好漁港。夜の常夜灯アジングが人気で魚影が濃い。上げ潮でアジが集まりやすい。', icon:'🐠' },
+  { id:'hirado1', name:'高越漁港', tideArea:'hirado', area:'平戸市春日', address:'長崎県平戸市高越町', lat:33.357, lng:129.407,
+    fish:['アジ','メバル','チヌ','アラカブ','スズキ'], tags:['漁港','平戸瀬戸','世界遺産近く','朝まずめ◎'],
+    tide:'春日集落（世界遺産）近くの漁港。平戸島西岸で潮通し良好。朝まずめのアジングで実績高い。上げ潮でアジが回遊。', icon:'🐟' },
+  { id:'kabashima1', name:'樺島（野母崎）', tideArea:'kabashima', area:'長崎市野母崎', address:'長崎県長崎市野母崎樺島町', lat:32.561, lng:129.728,
+    fish:['アジ','サバ','ブリ','カンパチ','メバル','アラカブ'], tags:['外洋','車でアクセス可','青物実績◎','潮通し抜群'],
+    tide:'野母崎半島の先、橋を渡って車でアクセスできる島。外洋に面し潮通し抜群。アジ・サバ・青物（ブリ・カンパチ）の実績が高い。朝まずめの青物、夕〜夜のアジングが特におすすめ。', icon:'🐟' },
+  { id:'isahaya1', tideArea:'nagasaki', name:'有喜漁港', area:'諫早市有喜町', address:'長崎県諫早市有喜町', lat:32.795, lng:130.018,
+    fish:['アジ','チヌ','キス','ハゼ'], tags:['港内','橘湾','足場よい','子ども可'],
+    tide:'橘湾に面した漁港（諫早湾ではない）。上げ潮でアジが入ってくる。干潮時は浅くなるので上げ始めが狙い目。', icon:'🐟' },
+  { id:'saikai1', name:'西海橋・針尾瀬戸', tideArea:'sasebo', area:'西海市', address:'長崎県西海市西彼町小迎郷（西海橋公園）', lat:33.155, lng:129.660,
+    fish:['チヌ','スズキ','アラカブ','アジ'], tags:['橋下','流れが速い','転流前後向き'],
+    tide:'流れが非常に速い。潮止まり（転流）の前後30分〜1時間が勝負。アジも転流後に動く。', icon:'🌀' },
+  { id:'sase1', name:'相浦港', tideArea:'sasebo', area:'佐世保市', address:'長崎県佐世保市相浦町', lat:33.200, lng:129.655,
+    fish:['チヌ','アジ','メバル'], tags:['港内','足場よい'],
+    tide:'湾奥で潮は穏やか。満潮前後が狙い目。夕方以降のアジングに適しています。', icon:'⚓' },
+  // ── 大村湾エリア（潮時・潮高は佐世保港基準の簡易補正値） ──
+  { id:'omura2', tideArea:'omura', name:'時津漁港', area:'大村湾西岸', address:'長崎県西彼杵郡時津町浦郷', lat:32.832, lng:129.858,
+    fish:['チヌ','アジ','キス'], tags:['護岸','トイレあり','大村湾内'],
+    tide:'大村湾内（潮時・潮高は簡易補正試験値。地点差あり）。船道付近は下げ潮で流れが出る。アジは夕〜夜。', icon:'🎣' },
+  { id:'omura4', tideArea:'omura', name:'大村港護岸', area:'大村湾東岸', address:'長崎県大村市玖島1丁目（大村港）', lat:32.908, lng:129.959,
+    fish:['アジ','チヌ','メバル'], tags:['護岸','夜釣り向き','大村湾内'],
+    tide:'大村湾内（潮時・潮高は簡易補正試験値。地点差あり）。常夜灯周りが狙い目。上げ潮でアジが寄りやすい。', icon:'🐠' },
+  { id:'omura5', tideArea:'omura', name:'大崎自然公園周辺', area:'大村湾北部・川棚町', address:'〒859-3618 長崎県東彼杵郡川棚町小串郷（大崎自然公園）', lat:33.073, lng:129.812,
+    fish:['チヌ','アラカブ','スズキ'], tags:['岬','大村湾内'],
+    tide:'大村湾内（潮時・潮高は簡易補正試験値。地点差あり）。大潮の上げ潮に向く。根周りでアラカブも狙える。', icon:'⛰️' },
+  { id:'omura1', tideArea:'omura', name:'川棚川河口', area:'大村湾北部・川棚町', address:'長崎県東彼杵郡川棚町百津郷（川棚港・川棚川河口）', lat:33.071, lng:129.883,
+    fish:['チヌ','スズキ','ハゼ','キス'], tags:['河口','上げ潮向き','大村湾内','子ども可'],
+    tide:'大村湾内（潮時・潮高は簡易補正試験値。地点差あり）。上げ始め〜上げ潮で反応が出やすい。', icon:'🐟' },
+  { id:'toamchi1', name:'戸町港・女神大橋下', tideArea:'toamchi', area:'長崎市戸町', address:'長崎県長崎市戸町（戸町港・女神大橋下）', lat:32.711, lng:129.839,
+    fish:['アジ','チヌ','メバル','アラカブ','スズキ'], tags:['漁港','常夜灯あり','橋下狙い','アジング◎','釣具店隣接'],
+    tide:'女神大橋のふもと、戸町港エリア。橋脚まわりはチヌ・スズキが潜む好ポイント。常夜灯効果で夜のアジングも人気。上げ潮で小魚の回遊が増える。', icon:'🎣' },
+  { id:'toamchi2', name:'釣具のポイント長崎女神店', type:'shop', tideArea:'toamchi', area:'長崎市戸町4丁目', address:'〒850-0952 長崎県長崎市戸町4丁目27-35', lat:32.712, lng:129.841,
+    fish:['アジ','チヌ','メバル','アラカブ'], tags:['釣具店','エサ購入','女神大橋近く'],
+    tide:'釣具のポイント長崎女神店（〒850-0952 長崎市戸町4丁目27-35）。出発前のエサ・仕掛け購入に便利。周辺の戸町港・女神大橋下が主な釣り場。', icon:'🏪' },
+  { id:'obama1', name:'富津港（小浜）', tideArea:'obama', area:'雲仙市小浜町富津', address:'〒854-0516 長崎県雲仙市小浜町富津（富津港）', lat:32.686, lng:130.196,
+    fish:['アジ','チヌ','メバル','アラカブ','スズキ','マダイ'], tags:['漁港','橘湾','小浜温泉近く','朝まずめ◎','アジング実績'],
+    tide:'橘湾に面した富津港。潮通しが良く、アジ・チヌ・アラカブが豊富。小浜温泉街に近く朝まずめのアジングで実績多い。上げ潮での回遊が顕著。', icon:'🐟' },
+];
+
+const FISH_CATS = [
+  {id:'全て',   icon:'🎣', label:'全て'},
+  {id:'アジ',   icon:'🐟', label:'アジ'},
+  {id:'チヌ',   icon:'⚫', label:'チヌ'},
+  {id:'メバル', icon:'🐠', label:'メバル'},
+  {id:'アラカブ',icon:'🦀',label:'アラカブ'},
+  {id:'スズキ', icon:'🌙', label:'スズキ'},
+  {id:'マダイ', icon:'🐡', label:'マダイ'},
+];
+const FISH_TIPS = {
+  '全て':    null,
+  'アジ':    '🐟 アジは朝まずめ・夕まずめ、夜の常夜灯周りが狙い目。野母崎・樺島・平戸・茂木など外洋に近いほど魚影が濃い。',
+  'チヌ':    '⚫ チヌは潮の動きがカギ。満潮前後や河口付近の濁りが入った時が良好。',
+  'メバル':  '🐠 メバルは夜釣りが基本。常夜灯のある漁港や岩礁帯で狙う。冬〜春が特に好シーズン。',
+  'アラカブ': '🦀 アラカブ（カサゴ）はテトラや石積みなど障害物の隙間を探ります。根魚なので場所選びが重要。',
+  'スズキ':  '🌙 スズキ（シーバス）は夕まずめ〜夜間に小魚を追って浅場に入ります。',
+  'マダイ':  '🐡 マダイは外洋に近い潮通しの良いポイント。野母崎沖・樺島・高越など岬・外洋が実績高い。',
+};
+let activeFishFilter = '全て';
+let mapMarkers = {};
+let leafletMap = null;
+let selectedWinMs = null; // 選択中のおすすめ時間帯（開始時刻ms）
+
+// ========================================================
+// 潮汐計算（長崎港 調和定数 ＋ 大村湾120分遅れ固定）
+// ========================================================
+const CONST = [
+  ['M2',28.9841042,0.853,138.0],['S2',30.0,0.308,157.2],['N2',28.4397295,0.168,118.4],
+  ['K1',15.0410686,0.241,271.8],['O1',13.9430356,0.187,252.3],['K2',30.0821373,0.088,179.5],
+  ['P1',14.9589314,0.072,268.0],['Mf',1.0980331,0.040,45.0],['Q1',13.3986609,0.038,225.0],
+];
+const MSL = 1.50;
+const REF = new Date('2000-01-01T00:00:00+09:00');
+// エリア別ラグ・振幅比・気象座標
+// ※ラグと振幅は気象庁・海保資料に基づく参考値。特に大村湾は佐世保港補正式（+2h55m・潮高比0.28）適用
+const AREAS = [
+  { id:'nagasaki', name:'長崎市',       lagMin:0,   ampRatio:1.0,  note:'長崎港基準',            lat:32.75,  lng:129.87  },
+  { id:'motogi',   name:'茂木',         lagMin:15,  ampRatio:0.98, note:'長崎港+15分（参考）',    lat:32.71,  lng:130.00  },
+  { id:'toamchi',  name:'戸町・女神橋', lagMin:5,   ampRatio:1.0,  note:'長崎港+5分（参考）',     lat:32.711, lng:129.839 },
+  { id:'hirado',   name:'平戸',         lagMin:0,   ampRatio:1.0,  note:'気象庁・平戸瀬戸',       lat:33.37,  lng:129.55  },
+  { id:'kabashima',name:'樺島（野母崎）',lagMin:0,  ampRatio:1.0,  note:'外洋・長崎港基準',       lat:32.561, lng:129.728 },
+  { id:'obama',    name:'小浜（富津）', lagMin:25,  ampRatio:0.98, note:'長崎港+25分（橘湾東岸参考）', lat:32.686, lng:130.196 },
+  { id:'omura',    name:'大村湾',       lagMin:175, ampRatio:0.28, note:'佐世保補正試験値+175分（長崎港基準の簡易補正）', lat:32.90, lng:129.90  },
+  { id:'sasebo',   name:'佐世保',        lagMin:0,   ampRatio:1.0,  note:'気象庁・佐世保港（QD）基準',  lat:33.155, lng:129.660  },
+];
+let AREA_LAG_MS = 0;
+let AREA_AMP_RATIO = 1.0;
+let AREA_LAT = 32.90, AREA_LNG = 129.90;
+let selectedAreaId = 'nagasaki';
+let weatherCache = {};
+let _weatherRequestSeq = 0;
+const MAX_FUTURE_DAYS = 370;
+const _maxRateCache = new Map();
+const _tideEventsCache = new Map();
+
+function _stationForArea(areaId){
+  if(areaId==='hirado') return 'X2';
+  if(areaId==='omura'||areaId==='sasebo') return 'QD';
+  return 'NS';
+}
+function _hasStationDataForDate(d,st=_stationForArea(selectedAreaId)){
+  const rows=_jmaCache[`${d.getFullYear()}_${st}`];
+  return Array.isArray(rows)&&rows.length>300;
+}
+function _isOfficialForDate(d){ return _hasStationDataForDate(d,_stationForArea(selectedAreaId)); }
+function _setHealth(id,text,state=''){
+  const el=document.getElementById(id); if(!el) return;
+  el.textContent=text; el.className='health-pill'+(state?' '+state:'');
+}
+function _clearScoreCaches(){ _maxRateCache.clear(); _tideEventsCache.clear(); }
+function maxTideRateForDay(d){
+  const t0=new Date(d); t0.setHours(0,0,0,0);
+  const key=`${selectedAreaId}|${t0.getTime()}|${_isOfficialForDate(t0)?'official':'estimate'}`;
+  if(_maxRateCache.has(key)) return _maxRateCache.get(key);
+  let mx=0;
+  for(let m=0;m<24*60;m+=30){ mx=Math.max(mx,Math.abs(tideR(new Date(t0.getTime()+m*60000)))); }
+  mx=mx||0.1; _maxRateCache.set(key,mx); return mx;
+}
+
+// ──────────────────────────────────────────────────
+// JMA 公式潮位エンジン
+// ──────────────────────────────────────────────────
+const _JMA_URL='https://www.data.jma.go.jp/kaiyou/data/db/tide/suisan/txt';
+const _jmaCache={}; // key:'YYYY_ST' → parsed days array
+let _jmaReady=false;
+
+function _parseJMALine(line){
+  const hourly=[];
+  for(let i=0;i<24;i++){
+    const v=parseInt(line.substring(i*3,(i+1)*3).trim(),10);
+    hourly.push(isNaN(v)||v>900?null:v);
+  }
+  const mm=parseInt(line.substring(74,76).trim(),10);
+  const dd=parseInt(line.substring(76,78).trim(),10);
+  function _evts(base){
+    const ev=[];
+    for(let i=0;i<4;i++){
+      const p=base+i*7;
+      const hs=line.substring(p,p+2).trim(), ms2=line.substring(p+2,p+4).trim(), vs=line.substring(p+4,p+7).trim();
+      if(hs==='99'||hs==='') continue;
+      const h=+hs, m2=+ms2, v=+vs;
+      if(!isNaN(h)&&!isNaN(m2)&&!isNaN(v)) ev.push({h,m:m2,v});
+    }
+    return ev;
+  }
+  return {mm,dd,hourly,highs:_evts(80),lows:_evts(108)};
+}
+
+async function _loadJMA(year,st){
+  const key=`${year}_${st}`;
+  if(_jmaCache[key]?.length) return true;
+  try{
+    const url=`${_JMA_URL}/${year}/${st}.txt`;
+    const r=await fetch(url);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const txt=await r.text();
+    const rows=txt.split('\n')
+      .filter(line=>line.length>=136)
+      .map(_parseJMALine)
+      .filter(d=>d.mm>=1&&d.mm<=12&&d.dd>=1&&d.dd<=31);
+    if(rows.length<300) throw new Error(`潮位データ不足：${rows.length}日分`);
+    _jmaCache[key]=rows;
+    console.log(`JMA読込成功：${st} ${year}年 ${rows.length}日`);
+    return true;
+  }catch(e){
+    console.error(`JMA読込失敗：${st} ${year}`,e);
+    return false;
+  }
+}
+
+
+// 地域ごとの潮位データソースラベル
+const _TIDE_SOURCE_LABELS={
+  nagasaki:'気象庁・長崎港',
+  motogi:'気象庁・長崎港を参考',
+  toamchi:'気象庁・長崎港を参考',
+  hirado:'気象庁・平戸瀬戸',
+  kabashima:'気象庁・長崎港を参考',
+  obama:'気象庁・長崎港を参考（橘湾東岸）',
+  omura:'気象庁・佐世保港＋大村補正',
+  sasebo:'気象庁・佐世保港（QD）'
+};
+function _updateTideSourceLabel(){
+  const _needSt=_stationForArea(selectedAreaId);
+  const _stOk=_hasStationDataForDate(selectedDay||new Date(),_needSt);
+  const lbl=_stOk?`(${_TIDE_SOURCE_LABELS[selectedAreaId]||'気象庁公式'})`:'(独自推定)';
+  const el=document.getElementById('tide-area-label');
+  if(el) el.textContent=lbl;
+  document.querySelectorAll('.tide-table-label').forEach(el2=>el2&&(el2.textContent=lbl));
+  _setHealth('tide-health',_stOk?'🌊 潮汐：気象庁データ':'🌊 潮汐：独自推定',_stOk?'ok':'warn');
+}
+
+async function initJMA(){
+  const now=new Date(), year=now.getFullYear();
+  const stations=['NS','QD','X2'];
+  const loads=stations.map(st=>_loadJMA(year,st));
+  // 翌年データも常に取得（年またぎ選択対応）
+  stations.forEach(st=>loads.push(_loadJMA(year+1,st)));
+  const results=await Promise.all(loads);
+  _jmaReady=results.slice(0,3).some(r=>r===true);
+  if(!_jmaReady){
+    console.warn('気象庁潮位データ取得失敗→独自推定を使用',results);
+    _setHealth('tide-health','🌊 潮汐：独自推定','warn');
+    _updateTideSourceLabel();
+    return false;
+  }
+  Object.keys(_sunCache).forEach(k=>delete _sunCache[k]);
+  _clearScoreCaches();
+  _setHealth('tide-health','🌊 潮汐：気象庁データ','ok');
+  _updateTideSourceLabel();
+  console.log('気象庁公式潮位エンジンへ切り替えました');
+  return true;
+}
+
+function _jmaHcm(d,st){
+  const yr=d.getFullYear(), key=`${yr}_${st}`;
+  const days=_jmaCache[key]; if(!days) return null;
+  const mn=d.getMonth()+1, dd=d.getDate();
+  const day=days.find(x=>x.mm===mn&&x.dd===dd); if(!day) return null;
+  const h=d.getHours(), m=d.getMinutes();
+  const v0=day.hourly[h]; if(v0===null) return null;
+  let v1=h<23?day.hourly[h+1]:null;
+  if(v1===null){
+    const nd=new Date(d); nd.setDate(nd.getDate()+1);
+    const nk=`${nd.getFullYear()}_${st}`;
+    const nd2=(_jmaCache[nk]||[]).find(x=>x.mm===nd.getMonth()+1&&x.dd===nd.getDate());
+    v1=nd2?nd2.hourly[0]:v0;
+  }
+  if(v1===null) v1=v0;
+  return v0+(v1-v0)*(m/60);
+}
+
+function tideH(d){
+  const _st=_stationForArea(selectedAreaId);
+  if(_hasStationDataForDate(d,_st)){
+    const id=selectedAreaId;
+    let cm=null;
+    if(id==='omura'){
+      const dQ=new Date(d.getTime()-175*60000);
+      const qcm=_jmaHcm(dQ,'QD');
+      if(qcm!==null) cm=(qcm-165)*0.28+50;
+    } else if(id==='hirado'){
+      cm=_jmaHcm(d,'X2');
+    } else if(id==='sasebo'){
+      cm=_jmaHcm(d,'QD');
+    } else {
+      // nagasaki/motogi/kabashima: NS基準 + ラグ
+      const eff=new Date(d.getTime()-AREA_LAG_MS);
+      cm=_jmaHcm(eff,'NS');
+    }
+    if(cm!==null) return cm/100;
+  }
+  // フォールバック: 調和定数推定
+  const eff=new Date(d.getTime()-AREA_LAG_MS);
+  const t=(eff-REF)/3600000;
+  const raw=CONST.reduce((h,[,s,a,p])=>h+a*Math.cos((s*t-p)*Math.PI/180),MSL);
+  return MSL+(raw-MSL)*AREA_AMP_RATIO;
+}
+function tideR(d){ const dt=10/60; return (tideH(new Date(d.getTime()+dt*3.6e6))-tideH(new Date(d.getTime()-dt*3.6e6)))/(2*dt); }
+
+function _getJMADay(d,st){
+  const key=`${d.getFullYear()}_${st}`;
+  return (_jmaCache[key]||[]).find(x=>x.mm===d.getMonth()+1&&x.dd===d.getDate())||null;
+}
+function _getOfficialTides(d){
+  // 使用局の個別取得状態を確認
+  const _needSt=_stationForArea(selectedAreaId);
+  if(!_hasStationDataForDate(d,_needSt)) return null;
+  const t0=new Date(d); t0.setHours(0,0,0,0);
+  function mkTime(h,m){ const t=new Date(t0); t.setMinutes(h*60+m); return t; }
+  if(selectedAreaId==='hirado'){
+    const day=_getJMADay(d,'X2'); if(!day) return null;
+    return [
+      ...day.highs.map(e=>({time:mkTime(e.h,e.m),type:'high',h:e.v/100})),
+      ...day.lows.map(e=>({time:mkTime(e.h,e.m),type:'low',h:e.v/100}))
+    ].filter(e=>!isNaN(e.h)).sort((a,b)=>a.time-b.time);
+  }
+  if(selectedAreaId==='omura'){
+    const day=_getJMADay(d,'QD'); if(!day) return null;
+    const LAG=175;
+    return [
+      ...day.highs.map(e=>({time:mkTime(e.h,e.m+LAG),type:'high',h:((e.v-165)*0.28+50)/100})),
+      ...day.lows.map(e=>({time:mkTime(e.h,e.m+LAG),type:'low',h:((e.v-165)*0.28+50)/100}))
+    ].filter(e=>!isNaN(e.h)&&e.h>0).sort((a,b)=>a.time-b.time);
+  }
+  if(selectedAreaId==='sasebo'){
+    const day=_getJMADay(d,'QD'); if(!day) return null;
+    return [
+      ...day.highs.map(e=>({time:mkTime(e.h,e.m),type:'high',h:e.v/100})),
+      ...day.lows.map(e=>({time:mkTime(e.h,e.m),type:'low',h:e.v/100}))
+    ].filter(e=>!isNaN(e.h)).sort((a,b)=>a.time-b.time);
+  }
+  // nagasaki/motogi/toamchi/kabashima/obama → NS
+  const day=_getJMADay(d,'NS'); if(!day) return null;
+  const lagMs=AREA_LAG_MS;
+  function mkLagTime(h,m){ const t=new Date(t0); t.setMinutes(h*60+m+lagMs/60000); return t; }
+  return [
+    ...day.highs.map(e=>({time:mkLagTime(e.h,e.m),type:'high',h:e.v/100})),
+    ...day.lows.map(e=>({time:mkLagTime(e.h,e.m),type:'low',h:e.v/100}))
+  ].filter(e=>!isNaN(e.h)).sort((a,b)=>a.time-b.time);
+}
+
+function findTides(d){
+  const t0=new Date(d); t0.setHours(0,0,0,0);
+  const key=`${selectedAreaId}|${t0.getTime()}|${_isOfficialForDate(t0)?'official':'estimate'}`;
+  if(_tideEventsCache.has(key)) return _tideEventsCache.get(key);
+  const t1=new Date(t0.getTime()+86400000);
+  if(_isOfficialForDate(d)){
+    const all=[];
+    for(const off of [-1,0,1]){
+      const dd=new Date(t0); dd.setDate(dd.getDate()+off);
+      const evts=_getOfficialTides(dd);
+      if(evts) all.push(...evts);
+    }
+    const filtered=all.filter(e=>e.time>=t0&&e.time<t1);
+    if(filtered.length>=2){ _tideEventsCache.set(key,filtered); return filtered; }
+  }
+  // フォールバック: 調和定数を10分刻みで走査（結果は日別キャッシュ）
+  const list=[]; let prev=tideR(t0);
+  for(let m=10;m<=24*60;m+=10){
+    const t=new Date(t0.getTime()+m*60000), r=tideR(t);
+    if(prev>0&&r<=0){ const pk=new Date(t.getTime()-300000); list.push({time:pk,type:'high',h:tideH(pk)}); }
+    if(prev<0&&r>=0){ const pk=new Date(t.getTime()-300000); list.push({time:pk,type:'low',h:tideH(pk)}); }
+    prev=r;
+  }
+  _tideEventsCache.set(key,list);
+  return list;
+}
+
+function nearestTurn(d){
+  const all=[];
+  for(const off of [-1,0,1]){
+    const dd=new Date(d); dd.setHours(0,0,0,0); dd.setDate(dd.getDate()+off);
+    all.push(...findTides(dd));
+  }
+  let best=null;
+  for(const e of all){
+    const diffMin=(e.time-d)/60000;
+    const absMin=Math.abs(diffMin);
+    if(!best||absMin<best.mins) best={mins:Math.round(absMin),isAfter:diffMin<0,type:e.type};
+  }
+  return best||{mins:9999,isAfter:true,type:'low'};
+}
+
+
+// ========================================================
+// 潮回り（簡易計算による「〜相当」表記）
+// ========================================================
+function lunarAge(d){
+  // 2026年6月基準
+  const knownNM=new Date('2026-06-15T11:54:00+09:00'); // 国立天文台：2026年6月朔
+  return (((d-knownNM)/86400000)%29.53058867+29.53058867)%29.53058867;
+}
+function tideType(d){
+  const a=lunarAge(d);
+  if(a<=2 || a>=27.5 || (a>=12.5&&a<=16.5)) return{name:'大潮相当',cls:'b-spring',tip:'大潮相当：潮の動きが大きくチャンスが多い日'};
+  if((a>=8.5&&a<=9.5)||(a>=22.5&&a<=23.5)) return{name:'長潮相当',cls:'b-longcho',tip:'長潮相当：潮が最も緩む日。場所選びが重要'};
+  if((a>=9.5&&a<=10.5)||(a>=23.5&&a<=24.5)) return{name:'若潮相当',cls:'b-neap',tip:'若潮相当：これから潮が大きくなっていくタイミング'};
+  if((a>=5.5&&a<=8.5)||(a>=18.5&&a<=22.5)) return{name:'小潮相当',cls:'b-neap',tip:'小潮相当：潮の動きは小さめ。転流前後を狙う'};
+  return{name:'中潮相当',cls:'b-mid',tip:'中潮相当：適度に潮が動き、釣果に期待できる日'};
+}
+
+// ========================================================
+// 天気取得・適用（未来の天気を正しく参照する）
+// ========================================================
+let weatherData=null;
+
+// dで指定された時刻に最も近い天気を取得する
+function getWeatherAt(d){
+  if(!weatherData || !weatherData.hourly) return null;
+  const s = `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}T${p2(d.getHours())}:00`;
+  const i = weatherData.hourly.time.indexOf(s);
+  if(i < 0) return null;
+  return {
+    temp: weatherData.hourly.temperature_2m[i],
+    code: weatherData.hourly.weathercode[i],
+    wind: weatherData.hourly.windspeed_10m[i],
+    rain: weatherData.hourly.precipitation[i]
+  };
+}
+function p2(n){return String(n).padStart(2,'0');}
+
+// 日の出・日の入り（Open-Meteo daily から取得、天文計算フォールバック付き）
+const _sunCache={};
+function _solarFallback(d,lat=AREA_LAT,lng=AREA_LNG){
+  const start=new Date(d.getFullYear(),0,0);
+  const n=Math.floor((new Date(d.getFullYear(),d.getMonth(),d.getDate())-start)/86400000);
+  const g=2*Math.PI/365*(n-1);
+  const eq=229.18*(0.000075+0.001868*Math.cos(g)-0.032077*Math.sin(g)-0.014615*Math.cos(2*g)-0.040849*Math.sin(2*g));
+  const dec=0.006918-0.399912*Math.cos(g)+0.070257*Math.sin(g)-0.006758*Math.cos(2*g)+0.000907*Math.sin(2*g)-0.002697*Math.cos(3*g)+0.00148*Math.sin(3*g);
+  const latR=lat*Math.PI/180, zen=90.833*Math.PI/180;
+  const cosH=(Math.cos(zen)/(Math.cos(latR)*Math.cos(dec)))-Math.tan(latR)*Math.tan(dec);
+  const ha=Math.acos(Math.max(-1,Math.min(1,cosH)))*180/Math.PI;
+  const noon=720-4*lng-eq+9*60;
+  return {r:(noon-4*ha)/60,s:(noon+4*ha)/60};
+}
+function _srss(d){
+  const k=`${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+  if(_sunCache[k]) return _sunCache[k];
+  const fallback=_solarFallback(d);
+  let r=fallback.r, ss=fallback.s;
+  if(weatherData?.daily?.sunrise){
+    const i=weatherData.daily.time.indexOf(k);
+    if(i>=0){
+      const rv=weatherData.daily.sunrise[i].slice(11).split(':');
+      const sv=weatherData.daily.sunset[i].slice(11).split(':');
+      r=+rv[0]+ +rv[1]/60; ss=+sv[0]+ +sv[1]/60;
+    }
+  }
+  return (_sunCache[k]={r,s:ss});
+}
+function _sunriseH(d){return _srss(d).r;}
+function _sunsetH(d){return _srss(d).s;}
+
+// ========================================================
+// 釣れどきスコア
+// ========================================================
+
+// 上げ・下げ方向を公式満干潮イベントから判定（JMAロード後）
+function tideDir(d){
+  if(_isOfficialForDate(d)){
+    const all=[];
+    for(const off of [-1,0,1]){
+      const dd=new Date(d); dd.setHours(0,0,0,0); dd.setDate(dd.getDate()+off);
+      const evts=_getOfficialTides(dd);
+      if(evts) all.push(...evts);
+    }
+    all.sort((a,b)=>a.time-b.time);
+    const prev=[...all].reverse().find(e=>e.time<=d);
+    const next=all.find(e=>e.time>d);
+    if(prev&&next) return prev.type==='low'?1:-1;
+  }
+  return Math.sign(tideR(d));
+}
+
+function fishScore(d,options={}){
+  const rate=tideR(d), dir=tideDir(d), h=tideH(d), hr=d.getHours()+d.getMinutes()/60;
+  let score=0; const bd=[];
+  const includeWeather=options.includeWeather!==false;
+
+  // 潮の速さ（その日の最大変化速度との相対評価→大村湾も公平に評価）
+  const ar=Math.abs(rate);
+  const _mx=maxTideRateForDay(d);
+  const relR=ar/_mx;
+  const tp=relR>0.65?40:relR>0.40?30:relR>0.18?18:5;
+  score+=tp; bd.push({l:'潮の動き',p:tp,m:40});
+
+  // 転流前後（潮の位相をより細かく）
+  const nt=nearestTurn(d);
+  let pp;
+  if(nt.isAfter&&nt.mins<=30) pp=10;          // 転流直後（まだ速度低）
+  else if(nt.isAfter&&nt.mins<=90) pp=20;     // 動き出し前半（最も活性化）
+  else if(nt.isAfter&&nt.mins<=180) pp=14;    // 上げ/下げ中盤
+  else if(!nt.isAfter&&nt.mins<=60) pp=14;    // 転流直前
+  else pp=5;
+  score+=pp; bd.push({l:'上げ/下げ始め',p:pp,m:20});
+
+  // まずめ（日の出・日の入り基準）
+  const _sr=_sunriseH(d), _ss=_sunsetH(d);
+  const inAM=hr>=_sr-1&&hr<=_sr+1, inPM=hr>=_ss-1.5&&hr<=_ss+0.5;
+  const nearAM=(hr>=_sr-2&&hr<_sr-1)||(hr>_sr+1&&hr<=_sr+2);
+  const nearPM=(hr>=_ss-2.5&&hr<_ss-1.5)||(hr>_ss+0.5&&hr<=_ss+1.5);
+  const isNight=hr>=21||hr<4;
+  const mp=inAM||inPM?20:nearAM||nearPM?10:isNight?8:4;
+  score+=mp; bd.push({l:'朝夕まずめ',p:mp,m:20});
+
+  // 潮位：全エリアで当日最低〜最高に対する相対評価
+  const _tds=findTides(new Date(d)); const _ths=_tds.map(t=>t.h);
+  let hp;
+  if(_ths.length>=2){
+    const _minH=Math.min(..._ths),_maxH=Math.max(..._ths);
+    const relH=(_maxH>_minH)?(h-_minH)/(_maxH-_minH):0.5;
+    hp=relH>=0.2&&relH<=0.8?10:relH>=0.05&&relH<=0.95?7:3;
+  } else {
+    hp=7; // データ不足時は中間値
+  }
+  score+=hp; bd.push({l:'潮位',p:hp,m:10});
+
+  // 潮回り（tideTypeを使い大村湾でも公平に評価）
+  const _ttName=tideType(d).name;
+  const rp=_ttName.includes('大潮')?10:_ttName.includes('中潮')?7:_ttName.includes('若潮')?5:3;
+  score+=rp; bd.push({l:`潮回り(${_ttName.replace('相当','')})`,p:rp,m:10});
+
+  // 指定時刻の天気・風を取得
+  const cw=includeWeather?getWeatherAt(d):null;
+  const wms=cw?cw.wind/3.6:0;
+  const wp=!cw?0:(wms<3?10:wms<6?8:wms<10?4:wms<14?0:-10);
+  if(includeWeather){ score+=wp; bd.push({l:`風 ${cw?Math.round(wms)+'m/s':'--'}`,p:Math.max(wp,0),m:10,pen:wp<0}); }
+
+  const rainp=!cw?0:(cw.rain===0?3:cw.rain<1?5:cw.rain<5?2:-8);
+  if(includeWeather){ score+=rainp; bd.push({l:`降水 ${cw?cw.rain+'mm':'--'}`,p:Math.max(rainp,0),m:5,pen:rainp<0}); }
+
+  // 天気込みは115点、潮汐・まずめのみは100点を100点換算
+  // 安全キャップ：強風(≥10m/s)・大雨(≥10mm)は必ず◎以下にしない
+  const _wms=cw?cw.wind/3.6:0;
+  const maxRaw=(includeWeather&&cw)?115:100;
+  let _finalScore=Math.max(0,Math.round(Math.min(score,maxRaw)/(maxRaw/100)));
+  if(cw&&(_wms>=10||cw.rain>=10)){ _finalScore=Math.min(_finalScore,39); }
+  return{score:_finalScore,bd,rate,dir,h,nt,cw};
+}
+
+// 峰検出による時間帯抽出
+function bestWindows(d){
+  const t0=new Date(d); t0.setHours(0,0,0,0);
+  const STEP=20, MAX_WIN_MIN=240, OPEN_TH=65, KEEP_TH=45;
+  const samples=[];
+  for(let m=0;m<24*60;m+=STEP){
+    const t=new Date(t0.getTime()+m*60000);
+    const {score,rate,nt}=fishScore(t);
+    samples.push({m,t,sc:score,rate,nt});
+  }
+  const n=samples.length;
+  const peaks=[];
+  for(let i=1;i<n-1;i++){
+    if(samples[i].sc>=OPEN_TH && samples[i].sc>=samples[i-1].sc && samples[i].sc>=samples[i+1].sc)
+      peaks.push(i);
+  }
+  peaks.sort((a,b)=>samples[b].sc-samples[a].sc);
+
+  const wins=[], used=new Uint8Array(n);
+  for(const pi of peaks){
+    if(used[pi]) continue;
+    let ls=pi;
+    while(ls>0 && samples[ls-1].sc>=KEEP_TH && (samples[pi].m-samples[ls-1].m)<=MAX_WIN_MIN/2) ls--;
+    let le=pi;
+    while(le<n-1 && samples[le+1].sc>=KEEP_TH && (samples[le+1].m-samples[ls].m)<=MAX_WIN_MIN) le++;
+    
+    let dup=false; for(let i=ls;i<=le;i++) if(used[i]){dup=true;break;}
+    if(dup) continue;
+    for(let i=ls;i<=le;i++) used[i]=1;
+    
+    const pk=samples[pi];
+    wins.push({
+      s: samples[ls].t,
+      e: new Date(samples[le].t.getTime()+STEP*60000),
+      sc: pk.sc,
+      r: buildReason(pk.t, pk.rate, tideDir(pk.t), pk.nt)
+    });
+    if(wins.length>=3) break;
+  }
+  return wins.sort((a,b)=>b.sc-a.sc);
+}
+
+function buildReason(d,rate,dir,nt){
+  const h=d.getHours()+d.getMinutes()/60; const p=[];
+  const _dir=dir>0?'上げ潮':'下げ潮';
+  let _phase='';
+  if(nt.isAfter&&nt.mins<=90) _phase=nt.type==='low'?'干潮からの動き出し':'満潮からの動き出し';
+  else if(nt.isAfter&&nt.mins<=180) _phase=_dir+'前半';
+  else _phase=_dir+'中盤';
+  p.push(_phase);
+  const _sr=_sunriseH(d),_ss=_sunsetH(d);
+  if(h>=_sr-1&&h<=_sr+1)p.push('朝まずめ'); if(h>=_ss-1.5&&h<=_ss+0.5)p.push('夕まずめ');
+  return p.join('・')||'潮が動く時間帯';
+}
+
+function ft(d){return `${p2(d.getHours())}:${p2(d.getMinutes())}`;}
+function sColor(s){return s>=80?'#2ecc71':s>=65?'#f39c12':s>=45?'#e67e22':'#7f8c8d';}
+function sLabel(s){return s>=80?'◎ チャンス大':s>=65?'○ なかなか良い':s>=45?'△ 場所次第':'✕ 散歩気分で';}
+
+// ========================================================
+// WMO天気コード
+// ========================================================
+function wmoInfo(c){
+  if(c===0)return{icon:'☀️',l:'快晴'};if(c<=2)return{icon:'🌤️',l:'晴れ時々曇り'};
+  if(c===3)return{icon:'☁️',l:'曇り'};if(c<=48)return{icon:'🌫️',l:'霧'};
+  if(c<=55)return{icon:'🌦️',l:'小雨'};if(c<=65)return{icon:'🌧️',l:'雨'};
+  if(c<=75)return{icon:'❄️',l:'雪'};if(c<=82)return{icon:'🌦️',l:'にわか雨'};
+  if(c>=95)return{icon:'⛈️',l:'雷雨'};return{icon:'🌡️',l:'不明'};
+}
+
+// ========================================================
+// 天気取得（Open-Meteo）
+// ========================================================
+async function fetchWeather(){
+  const requestId=++_weatherRequestSeq;
+  const lat=AREA_LAT.toFixed(2), lng=AREA_LNG.toFixed(2);
+  _setHealth('weather-health','⛅ 天気：取得中');
+  const cacheKey=`${lat},${lng}`;
+  if(weatherCache[cacheKey]){
+    if(requestId!==_weatherRequestSeq) return;
+    weatherData=weatherCache[cacheKey]; _setHealth('weather-health','⛅ 天気：Open-Meteo','ok'); renderWStrip(); renderFcDays(); renderAll(); return;
+  }
+  // タイムアウト付きfetch（AbortController互換）
+  function _fetchWithTimeout(url, ms){
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),ms);
+    return fetch(url,{signal:ctrl.signal}).finally(()=>clearTimeout(tid));
+  }
+  const _urls=[
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}`
+      +'&hourly=temperature_2m,weather_code,wind_speed_10m,precipitation'
+      +'&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset'
+      +'&timezone=Asia%2FTokyo&forecast_days=16',
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}`
+      +'&hourly=temperature_2m,weather_code,wind_speed_10m,precipitation'
+      +'&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset'
+      +'&timezone=Asia%2FTokyo&forecast_days=7'
+  ];
+  let _lastErr=null;
+  for(const _url of _urls){
+    for(let _try=0;_try<2;_try++){
+      try{
+        console.log(`天気取得試行 (try${_try+1}):`,_url.slice(0,80));
+        const r=await _fetchWithTimeout(_url,12000);
+        if(!r.ok) throw new Error(`HTTP ${r.status}`);
+        const json=await r.json();
+        if(!json.hourly?.time) throw new Error('レスポンス形式エラー');
+        // Open-Meteoの現行フィールド名を内部互換名へ正規化
+        json.hourly.weathercode=json.hourly.weather_code??json.hourly.weathercode;
+        json.hourly.windspeed_10m=json.hourly.wind_speed_10m??json.hourly.windspeed_10m;
+        json.daily.weathercode=json.daily.weather_code??json.daily.weathercode;
+        json.daily.windspeed_10m_max=json.daily.wind_speed_10m_max??json.daily.windspeed_10m_max;
+        weatherCache[cacheKey]=json;
+        if(requestId!==_weatherRequestSeq) return;
+        weatherData=json; Object.keys(_sunCache).forEach(k=>delete _sunCache[k]); _setHealth('weather-health','⛅ 天気：Open-Meteo','ok');
+        renderWStrip(); renderFcDays(); renderAll();
+        console.log('天気取得成功');
+        return; // 成功したら終了
+      }catch(e){
+        _lastErr=e;
+        console.warn(`天気取得失敗 (try${_try+1}):`,e.message||e);
+        if(_try===0) await new Promise(res=>setTimeout(res,2000)); // 2秒待ってリトライ
+      }
+    }
+  }
+  // 全試行失敗
+  if(requestId!==_weatherRequestSeq) return;
+  console.error('天気取得全失敗:', _lastErr?.message);
+  weatherData=null; _setHealth('weather-health','⛅ 天気：取得失敗','bad');
+  const ws=document.getElementById('wstrip');
+  if(ws) ws.innerHTML=`<div style="padding:10px 14px;font-size:.72rem;color:#c0392b">天気取得失敗：${_lastErr?.message||'不明'}<br><span style="opacity:.7">（潮汐データは正常動作中）</span></div>`;
+  const fd=document.getElementById('fc-days');
+  if(fd) fd.innerHTML='<div style="padding:10px;font-size:.72rem;color:#7eb8d4">天気データなし（潮汐のみ表示中）</div>';
+}
+
+function renderWStrip(){
+  if(!weatherData){ const el=document.getElementById('wstrip'); if(el&&!el.textContent.includes('取得中')) el.innerHTML='<div style="padding:10px 4px;font-size:.73rem;color:#3a6a8a">天気データなし</div>'; return; }
+  const now=new Date();
+  const baseDay=selectedDay||_todayMidnight();
+  const isBaseToday=(baseDay.toDateString()===now.toDateString());
+  const baseDayStr=`${baseDay.getFullYear()}-${p2(baseDay.getMonth()+1)}-${p2(baseDay.getDate())}`;
+  const todayStr=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
+  const times=weatherData.hourly.time; let html='',shown=0;
+  for(let i=0;i<times.length&&shown<24;i++){
+    const t=times[i]; const hr=parseInt(t.slice(11,13));
+    // 選択日の0時以降を表示（今日なら現在時刻以降）
+    const cutoff=isBaseToday?`${todayStr}T${p2(now.getHours())}:00`:`${baseDayStr}T00:00`;
+    if(t<cutoff)continue;
+    const isNow=t.startsWith(todayStr)&&hr===now.getHours();
+    const info=wmoInfo(weatherData.hourly.weathercode[i]);
+    const temp=Math.round(weatherData.hourly.temperature_2m[i]);
+    const wind=Math.round(weatherData.hourly.windspeed_10m[i]/3.6);
+    const rain=weatherData.hourly.precipitation[i];
+    const _d0=baseDayStr,_d1=getDS(1,baseDay),_d2=getDS(2,baseDay); const dayTag=t.startsWith(_d0)?'':t.startsWith(_d1)?'<span style="color:#f39c12;font-size:.55rem">翌日</span>':'<span style="color:#e67e22;font-size:.55rem">翌々</span>';
+    html+=`<div class="wh${isNow?' now':''}"><div class="wt">${dayTag}${p2(hr)}時</div><div class="wi">${info.icon}</div><div class="wc">${temp}°</div><div class="ww">💨${wind}m/s</div>${rain>0?`<div class="wr">💧${rain}</div>`:''}</div>`;
+    shown++;
+  }
+  document.getElementById('wstrip').innerHTML=html||'<div style="padding:10px">データなし</div>';
+}
+
+function getDS(offset,base){
+  const d=new Date(base||new Date()); d.setDate(d.getDate()+offset);
+  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+}
+
+function renderFcDays(){
+  if(!weatherData){ const el=document.getElementById('fc-days'); if(el) el.innerHTML=''; return; }
+  const el=document.getElementById('fc-days'); const days=weatherData.daily;
+  const base=selectedDay||_todayMidnight();
+  const baseKey=`${base.getFullYear()}-${p2(base.getMonth()+1)}-${p2(base.getDate())}`;
+  const startIndex=days.time.indexOf(baseKey);
+  const note=document.getElementById('forecast-limit-note');
+  if(startIndex<0){
+    el.innerHTML='';
+    if(note){ note.textContent='選択日は天気予報の提供期間外です。表示中の指数は潮汐・日の出入りを中心とした参考値です。'; note.classList.add('show'); }
+    return;
+  }
+  if(note) note.classList.remove('show');
+  let html='';
+  const today=_todayMidnight();
+  for(let i=startIndex;i<Math.min(days.time.length,startIndex+3);i++){
+    const date=new Date(days.time[i]+'T00:00:00+09:00');
+    const info=wmoInfo(days.weathercode[i]);
+    const maxT=Math.round(days.temperature_2m_max[i]), minT=Math.round(days.temperature_2m_min[i]);
+    const wind=Math.round(days.windspeed_10m_max[i]/3.6), rain=days.precipitation_sum[i];
+    const wc=days.weathercode[i];
+    let fc='fish-good',fl='◎ 釣り日和';
+    if(wind>=10||wc>=95){fc='fish-bad';fl='✕ 荒天注意';}
+    else if(wind>=7||(wc>=61&&wc<=65)||rain>15){fc='fish-ok';fl='△ 要確認';}
+    else if(wc>=51&&wc<=55){fc='fish-ok';fl='△ 小雨・足元注意';}
+    const diff=Math.round((date-today)/86400000);
+    const dn=diff===0?'今日':diff===1?'明日':diff===2?'明後日':`${diff}日後`;
+    html+=`<div class="fc-day${i===startIndex?' today':''}"><div class="fd-date">${dn} ${date.getMonth()+1}/${date.getDate()}</div><div class="fd-icon">${info.icon}</div><div class="fd-desc">${info.l}</div><div class="fd-temps"><span class="fd-max">${maxT}°</span>/<span class="fd-min">${minT}°</span></div><div class="fd-wind">💨 最大${wind}m/s</div><div class="fd-rain">☔ ${rain}mm</div><div class="fd-fish ${fc}">${fl}</div></div>`;
+  }
+  el.innerHTML=html;
+}
+
+// ========================================================
+// 初心者向け「いつ釣れる？」
+// ========================================================
+function renderBeginnerCard(){
+  if(!selectedDay) selectedDay = _todayMidnight();
+  const now = new Date();
+  const today = _todayMidnight();
+  const isToday = selectedDay.getTime() === today.getTime();
+  const midnight = new Date(selectedDay);
+
+  const titleEl = document.getElementById('beginner-card-title');
+  if(titleEl) titleEl.textContent = isToday ? '🐟 今日、いつ行けばいい？' : `🐟 ${_dayLabel(selectedDay)}の釣り予報`;
+
+  const hourScores = [];
+  for(let h=0; h<24; h++){
+    const t = new Date(midnight.getTime() + h*3600000);
+    hourScores.push({ h, score: fishScore(t).score });
+  }
+
+  const barEl = document.getElementById('hour-bar');
+  barEl.innerHTML = '';
+  const nowH = isToday ? now.getHours() : -1;
+  for(const {h, score} of hourScores){
+    const div = document.createElement('div');
+    div.className = 'hour-block' + (h === nowH ? ' now-block' : '');
+    const col = score>=80 ? '#2ecc71' : score>=65 ? '#f39c12' : score>=45 ? '#e67e22' : '#1a3050';
+    div.style.background = col;
+    div.style.opacity = score>=40 ? '1' : '0.5';
+    if(h % 6 === 0){
+      const lbl = document.createElement('div');
+      lbl.className = 'hb-label';
+      lbl.textContent = h + '時';
+      div.appendChild(lbl);
+    }
+    barEl.appendChild(div);
+  }
+
+  const statusEl = document.getElementById('now-status-big');
+  if(isToday){
+    const {score: nowScore, rate, dir, nt} = fishScore(now);
+    // 相対変化速度で潮止まり判定（大村湾対応）
+    const _relNow=Math.abs(rate)/maxTideRateForDay(now);
+    const _isSlack=_relNow<0.15;
+    let emoji, titleTxt, descTxt;
+    if(_isSlack){
+      emoji='⏸'; titleTxt='潮止まりの時間帯です';
+      descTxt='今は潮がほとんど動いていません。転流後の動き出しを狙いましょう。';
+    } else if(nowScore >= 80){
+      emoji='🟢'; titleTxt='◎ チャンスの時間帯です';
+      descTxt=plainExplain(rate, dir, nt,now,_relNow);
+    } else if(nowScore >= 65){
+      emoji='🟡'; titleTxt='○ なかなか良い条件です';
+      descTxt=plainExplain(rate, dir, nt,now,_relNow);
+    } else if(nowScore >= 45){
+      emoji='🟠'; titleTxt='条件を選べば狙える時間';
+      descTxt=plainExplain(rate, dir, nt,now,_relNow);
+    } else {
+      emoji='😴'; titleTxt='釣れにくい時間帯です';
+      descTxt=plainExplain(rate, dir, nt,now,_relNow)+' 下のランキングを参考に時間をずらすのがおすすめ。';
+    }
+    statusEl.innerHTML = `
+      <div class="now-emoji">${emoji}</div>
+      <div class="now-text-block">
+        <div class="now-title" style="color:${sColor(nowScore)}">${titleTxt}</div>
+        <div class="now-desc">${descTxt}</div>
+      </div>`;
+  } else {
+    const tt = tideType(midnight).name;
+    const avgScore = Math.round(hourScores.reduce((a,b)=>a+b.score,0)/24);
+    let dayEmoji = avgScore>=80?'🟢':avgScore>=65?'🟡':avgScore>=45?'🟠':'😴';
+    let dayComment = avgScore>=80?'この日は全体的に良い条件が揃います':avgScore>=65?'時間帯を選べば期待できる日です':avgScore>=45?'平凡な日。下のランキング時間を狙って':'やや厳しい日。転流前後を丁寧に狙いたい';
+    statusEl.innerHTML = `
+      <div class="now-emoji">${dayEmoji}</div>
+      <div class="now-text-block">
+        <div class="now-title" style="color:${sColor(avgScore)}">${dayComment}</div>
+        <div class="now-desc">潮回り：${tt} / 1日の平均スコア ${avgScore}点</div>
+      </div>`;
+  }
+
+  const wins = bestWindows(midnight);
+  const listEl = document.getElementById('best-times-list');
+  listEl.innerHTML = '';
+  const ranks = ['🥇','🥈','🥉'];
+  const rankCls = ['rank1','rank2','rank3'];
+
+  if(!wins.length){
+    listEl.innerHTML = '<div style="font-size:.82rem;color:#7eb8d4">この日は好条件が少ない日です。潮の動き出しを丁寧に狙いましょう。</div>';
+    return;
+  }
+
+  function _renderWin(w,rankIcon,rCls,opacity,isCurrent){
+    const eL=(w.e.getHours()===0?'24:00':ft(w.e))+'頃';
+    const sL=ft(w.s)+'頃';
+    const sh=w.s.getHours();
+    const _t1=sh>=19?'夜':sh>=15?'夕方':sh>=11?'昼':sh>=7?'午前':sh>=4?'未明':sh>=0?'深夜':'深夜'; const eh2=(w.e.getHours()===0?24:w.e.getHours())-1; const _t2=eh2>=19?'夜':eh2>=15?'夕方':eh2>=11?'昼':eh2>=7?'午前':eh2>=4?'未明':eh2>=0?'深夜':'深夜'; const tod=_t1===_t2?_t1:_t1+'〜'+_t2;
+    const nowTag=isCurrent?'<span style="color:#2ecc71;font-size:.7rem">← 今ここ！</span>':'';
+    const item=document.createElement('div');
+    item.className=`bt-item ${rCls}`; item.style.opacity=String(opacity);
+    item.innerHTML=`<div class="bt-rank">${rankIcon}</div><div style="flex:1"><div class="bt-time">${tod} ${sL} 〜 ${eL} ${nowTag}</div><div class="bt-reason">${plainWindowReason(w.r,w.sc)}</div></div>`;
+    return item;
+  }
+  const futureWins=isToday?wins.filter(w=>w.e>now):wins;
+  const pastWins=isToday?wins.filter(w=>w.e<=now):[];
+  if(futureWins.length){
+    // 現在進行中のウィンドウを最上部にハイライト
+    const nowWin=isToday?futureWins.find(w=>w.s<=now&&w.e>now):null;
+    if(nowWin){
+      const nb=document.createElement('div');
+      nb.style.cssText='background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.35);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:.8rem;color:#2ecc71;font-weight:600;';
+      nb.innerHTML=`⬇ 今から行くなら　<span style="font-size:.95rem;">${ft(nowWin.s)}〜${nowWin.e.getHours()===0?'24:00':ft(nowWin.e)}</span>（現在進行中）`;
+      listEl.appendChild(nb);
+    }
+    if(isToday&&pastWins.length){
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:.68rem;color:#7dccff;font-weight:600;margin:4px 0 6px';
+      hdr.textContent='⬇ これからのベスト'; listEl.appendChild(hdr);
+    }
+    futureWins.forEach((w,i)=>{
+      const isNow=isToday&&w.s<=now&&w.e>now;
+      listEl.appendChild(_renderWin(w,ranks[i]||' ',rankCls[i]||'rank3',1,isNow));
+    });
+  } else if(isToday){
+    const msg=document.createElement('div');
+    msg.style.cssText='font-size:.82rem;color:#7eb8d4;margin-bottom:4px';
+    msg.textContent='今日の好条件は全て終了しました。明日をお楽しみに！'; listEl.appendChild(msg);
+  }
+  if(pastWins.length){
+    const hdr=document.createElement('div');
+    hdr.style.cssText='font-size:.65rem;color:#445566;font-weight:600;margin:10px 0 4px';
+    hdr.textContent='本日の好条件（終了済み）'; listEl.appendChild(hdr);
+    pastWins.forEach(w=>listEl.appendChild(_renderWin(w,' ','rank3',0.30,false)));
+  }
+}
+
+function plainExplain(rate, dir, nt, now, relR){
+  const ar = Math.abs(rate);
+  const h = now.getHours();
+  const isMorning = h>=5&&h<=7;
+  const isEvening = h>=17&&h<=19;
+  const mazume = isMorning ? '朝まずめの時間帯です。' : isEvening ? '夕まずめの時間帯です。' : '';
+  const _slack = relR!==undefined ? relR<0.15 : ar<0.12;
+  if(_slack) return mazume + '今は潮止まりに近い状態です。少し待って転流後の動き出しを狙いましょう。';
+  const _tdir = dir > 0 ? '上げ' : '下げ';
+  const loc = dir > 0 ? '浅場や河口' : '橋の下や護岸の角';
+  if(nt.isAfter && nt.mins <= 120){
+    if(nt.type === 'low') return mazume + `干潮からの動き出しです。小魚が動きやすく、<b>浅場や河口が狙い目</b>になります。`;
+    else return mazume + `満潮からの下がり始めです。流れが生まれる<b>橋の下や護岸の角が狙い目</b>です。`;
+  }
+  if(!nt.isAfter && nt.mins <= 60){
+    return mazume + `${_tdir}潮の終盤です。あと約${nt.mins}分で転流（${nt.type==='low'?'干潮':'満潮'}）。転流直後の動き出しに備えて。`;
+  }
+  if(!nt.isAfter && nt.mins <= 120){
+    return mazume + `${_tdir}潮の後半です。転流まであと約${nt.mins}分。<b>${loc}</b>を丁寧に狙いましょう。`;
+  }
+  return mazume + `今は${_tdir}潮の中盤です。潮が動いている間は魚もエサを追いかけやすいです。`;
+}
+
+function plainWindowReason(reason, score){
+  const parts = [];
+  if(reason.includes('干潮からの動き出し') || reason.includes('上げ始め')){
+    parts.push('<b>潮が上がり始める時間。</b>河口や浅場に魚が入りやすいタイミングです。');
+  } else if(reason.includes('満潮からの動き出し') || reason.includes('下げ始め')){
+    parts.push('<b>潮が下がり始める時間。</b>流れが生まれる場所（橋の下や船道）が良好です。');
+  } else if(reason.includes('上げ潮')) parts.push('潮が上がっている時間帯。浅場に魚が入ってきやすいです。');
+  else if(reason.includes('下げ潮')) parts.push('潮が下がっている時間帯。地形の変化がある場所が狙い目。');
+
+  if(reason.includes('朝まずめ')) parts.push('朝の魚が活発になる時間帯と重なります。');
+  if(reason.includes('夕まずめ')) parts.push('夕方の魚が活発になる時間帯と重なります。');
+
+  if(score>=90) parts.push('好条件が重なっています。安全確認のうえ短時間釣行にも向くタイミングです。');
+  else if(score>=70) parts.push('潮の動きが良く、狙いやすい時間帯です。');
+
+  return parts.join(' ') || '潮が動いていて反応が出やすい時間帯です。';
+}
+
+// ========================================================
+// メインレンダリング
+// ========================================================
+function renderAll(){
+  _updateTideSourceLabel();
+  const now=new Date();
+  const today=_todayMidnight();
+  const dayRef=selectedDay||today;
+  const isToday=dayRef.getTime()===today.getTime();
+
+  document.getElementById('now-time-hdr').textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${ft(now)} 現在`;
+
+  // 参照時刻: 今日=現在時刻, 未来日=その日のベストスコア時刻
+  let refTime=now;
+  if(!isToday){
+    let bestSc=0;
+    const dm=new Date(dayRef);
+    for(let m=0;m<24*60;m+=20){
+      const t=new Date(dm.getTime()+m*60000);
+      const {score:sc}=fishScore(t);
+      if(sc>bestSc){bestSc=sc; refTime=t;}
+    }
+  }
+  const {score,bd,rate,dir,h,nt,cw}=fishScore(refTime);
+  const dispScore=score;
+
+  const sn=document.getElementById('snum'); sn.textContent=dispScore; sn.style.color=sColor(dispScore);
+  const sbf=document.getElementById('score-bar-fill');
+  if(sbf){ sbf.style.width=dispScore+'%'; sbf.style.background=sColor(dispScore); }
+  document.getElementById('stitle').textContent=isToday?sLabel(dispScore):`ベスト ${sLabel(dispScore)}`;
+
+  const ar=Math.abs(rate);
+  // 相対変化速度でエリア間公平評価（大村湾の誤判定防止）
+  const relR=ar/maxTideRateForDay(refTime);
+  let cmt='';
+  if(relR<0.15)cmt='今は潮止まりに近い時間。30〜60分待つか場所を変えてみて。';
+  else if(nt.isAfter&&nt.mins<=90&&nt.type==='low')cmt='干潮からの動き出し。河口・浅場で反応が出やすい時間帯。';
+  else if(nt.isAfter&&nt.mins<=90&&nt.type==='high')cmt='満潮からの下げ始め。橋の下・護岸の角など流れが出る場所が◎。';
+  else if(nt.isAfter&&nt.mins<=180&&nt.type==='low')cmt='上げ潮前半。浅場・河口に魚が入ってきやすい時間帯。';
+  else if(nt.isAfter&&nt.mins<=180&&nt.type==='high')cmt='下げ潮前半。流れが出る地形の角を狙うと◎。';
+  else if(!nt.isAfter&&nt.mins<=60){const _dA=dir>0?'上げ':'下げ'; cmt=`${_dA}潮の終盤。転流まで約${nt.mins}分。転流後の動き出しに備えましょう。`;}
+  else if(!nt.isAfter&&nt.mins<=120){const _dB=dir>0?'上げ':'下げ'; const _lB=dir>0?'浅場・河口':'地形の角・船道'; cmt=`${_dB}潮の後半。転流まで約${nt.mins}分。${_lB}が狙い目です。`;}
+  else if(!nt.isAfter&&nt.mins<=90)cmt=`転流まで約${nt.mins}分。転流直後の動き出しを狙いましょう。`;
+  else if(dir>0)cmt='上げ潮の中盤。浅場・河口が引き続き狙い目です。';
+  else cmt='下げ潮の中盤。地形の変化がある場所を丁寧に狙いましょう。';
+  if(!isToday) cmt=`ベスト時刻 ${ft(refTime)} 頃。` + cmt;
+  if(cw){const wms=cw.wind/3.6;if(wms>10)cmt+=' ⚠️ 風が強め。風裏を探してください。';}
+  document.getElementById('scomment').textContent=cmt;
+
+  const tb=document.getElementById('tide-badge');
+  if(relR<0.15){tb.className='badge b-slack';tb.textContent='⏸ 潮止まり';}
+  else if(dir>0){tb.className='badge b-up';tb.textContent='↑ 上げ潮';}
+  else{tb.className='badge b-dn';tb.textContent='↓ 下げ潮';}
+  const _htEl=document.getElementById('tide-ht'); const _official=_isOfficialForDate(refTime); _htEl.textContent=_official?`予測潮位 約${h.toFixed(2)}m`:`独自推定 ${h.toFixed(1)}m`; _htEl.title=_official?'気象庁公式潮位データ（cm→m換算）':'独自推定値。公式潮位表とは基準・値が異なります。';
+
+  const tt=tideType(refTime);
+  const ttb=document.getElementById('ttype-badge');
+  ttb.className=`badge ${tt.cls}`; ttb.textContent=tt.name; ttb.title=tt.tip;
+
+  const wb=document.getElementById('wx-badge');
+  if(cw){
+    const info=wmoInfo(cw.code); const wms=cw.wind/3.6;
+    wb.style.display='inline-flex'; wb.className='badge b-weather'+(wms>10?' b-wind-bad':'');
+    wb.textContent=`${info.icon} ${Math.round(cw.temp)}° 💨${Math.round(wms)}m/s`;
+  } else if(wb){ wb.style.display='none'; wb.textContent=''; }
+
+  const bdEl=document.getElementById('bd-rows'); bdEl.innerHTML='';
+  for(const item of bd){
+    const pct=Math.max(0,(item.p/item.m)*100);
+    const col=item.pen?'#e74c3c':item.p>=item.m*.7?'#2ecc71':item.p>=item.m*.4?'#f39c12':'#7f8c8d';
+    const el=document.createElement('div'); el.className='bd-row';
+    el.innerHTML=`<span class="bd-label">${item.l}</span><div class="bd-bar-w"><div class="bd-bar" style="width:${pct}%;background:${col}"></div></div><span class="bd-pts" style="color:${item.pen?'#e74c3c':'#7dccff'}">${item.p>=0?'+':''}${item.p}点</span>`;
+    bdEl.appendChild(el);
+  }
+
+  const ddl=document.getElementById('detail-date-label');
+  if(ddl) ddl.textContent=_dayLabel(dayRef);
+  const tides=findTides(dayRef); const tbl=document.getElementById('tide-table'); tbl.innerHTML='';
+  for(const tide of tides){
+    const isNext=tide.time>now&&!tides.slice(0,tides.indexOf(tide)).some(t=>t.time>now);
+    const row=document.createElement('div'); row.className='tide-row'+(isNext?' next':'');
+    row.innerHTML=`<span class="tm">${isNext?'→ ':''}${ft(tide.time)}</span><span class="tp">${tide.type==='high'?'▲ 満潮':'▽ 干潮'}</span><span class="th">${tide.h.toFixed(2)}m</span>`;
+    tbl.appendChild(row);
+  }
+
+  const winEl=document.getElementById('win-list'); winEl.innerHTML='';
+  const wins=bestWindows(dayRef);
+  if(!wins.length) winEl.innerHTML='<div style="color:#7eb8d4;font-size:.78rem">転流前後を丁寧に狙いましょう</div>';
+  for(const w of wins){
+    const good=w.sc>=65; const el=document.createElement('div');
+    const isSelected = selectedWinMs===w.s.getTime();
+    el.className='win-item'+(good?'':' ok')+(isSelected?' selected':'');
+    const eL=w.e.getHours()===0?'24:00':ft(w.e);
+    el.innerHTML=`<div><span class="win-score${good?'':' ok'}">${w.sc}点</span><span class="win-time">${ft(w.s)} 〜 ${eL}</span></div><div class="win-reason">${w.r}</div>`;
+    const wMs=w.s.getTime();
+    el.onclick=()=>{
+      selectedWinMs = selectedWinMs===wMs ? null : wMs;
+      drawCurve(dayRef);
+      document.querySelectorAll('.win-item').forEach(e=>e.classList.remove('selected'));
+      if(selectedWinMs!==null) el.classList.add('selected');
+      // 詳細セクションが閉じていたら開く
+      const sec=document.getElementById('detail-section');
+      if(sec&&sec.style.display==='none') toggleDetails();
+    };
+    winEl.appendChild(el);
+  }
+
+  renderBeginnerCard();
+  drawCurve(dayRef);
+  renderTomorrow();
+  renderWeekends();
+}
+
+// ========================================================
+// 明日のベストタイム
+// ========================================================
+function renderTomorrow(){
+  const tom=new Date(); tom.setDate(tom.getDate()+1); tom.setHours(0,0,0,0);
+  const wins=bestWindows(tom);
+  const tt=tideType(tom);
+  const el=document.getElementById('tomorrow-list'); el.innerHTML='';
+  const header=document.createElement('div');
+  header.innerHTML=`<div style="font-size:.72rem;color:#7eb8d4;margin-bottom:8px">明日 ${tom.getMonth()+1}月${tom.getDate()}日 <span class="badge ${tt.cls}" style="font-size:.65rem;padding:2px 6px;border-radius:8px;">${tt.name}</span></div>`;
+  el.appendChild(header);
+  
+  if(!wins.length){el.innerHTML+='<div style="font-size:.78rem;color:#7eb8d4">好条件の時間帯は少ない日です</div>';return;}
+  for(const w of wins){
+    const eL=w.e.getHours()===0?'24:00':ft(w.e);
+    const item=document.createElement('div'); item.className='tomorrow-item';
+    item.innerHTML=`<div><span class="ti-score">${w.sc}点</span><span class="ti-time">${ft(w.s)} 〜 ${eL}</span></div><div class="ti-reason">${w.r}</div>`;
+    el.appendChild(item);
+  }
+}
+
+// ========================================================
+// 土日プランナー
+// ========================================================
+function renderWeekends(){
+  const el=document.getElementById('weekend-planner'); el.innerHTML='';
+  el.innerHTML='<div style="font-size:.65rem;color:#3a6a8a;margin-bottom:8px;line-height:1.4;">※16日先までは潮汐・まずめ・風・降水を反映。それ以降は潮汐・まずめのみの参考指数です。</div>';
+  const now=new Date(); now.setHours(0,0,0,0);
+  const weekends=[]; let d=new Date(now);
+  while(weekends.length<4){
+    d=new Date(d.getTime()+86400000);
+    if(d.getDay()===6){
+      const sat=new Date(d), sun=new Date(d.getTime()+86400000);
+      weekends.push({sat,sun});
+    }
+  }
+
+  for(const wk of weekends){
+    const section=document.createElement('div'); section.className='weekend-section';
+    const satWins=bestWindows(wk.sat).slice(0,1);
+    const sunWins=bestWindows(wk.sun).slice(0,1);
+    const satTT=tideType(wk.sat), sunTT=tideType(wk.sun);
+
+    const satBest=satWins[0]?.sc||0, sunBest=sunWins[0]?.sc||0;
+    const maxSc=Math.max(satBest,sunBest);
+
+    const headerEl=document.createElement('div'); headerEl.className='weekend-header';
+    headerEl.innerHTML=`${wk.sat.getMonth()+1}/${wk.sat.getDate()}(土)〜${wk.sun.getMonth()+1}/${wk.sun.getDate()}(日) <span style="color:${sColor(maxSc)};font-size:.7rem;">最高 ${maxSc}点</span>`;
+    section.appendChild(headerEl);
+
+    const gridEl=document.createElement('div'); gridEl.className='weekend-grid';
+    for(const [day,wins,tt,cls] of [['土',satWins,satTT,'sat'],['日',sunWins,sunTT,'sun']]){
+      const dayEl=document.createElement('div'); dayEl.className=`weekend-day ${cls}`;
+      const dat=cls==='sat'?wk.sat:wk.sun;
+      const w=wins[0];
+      const tTypeHtml=`<span class="wd-ttype ${tt.cls}">${tt.name}</span>`;
+      if(w){
+        const eL=w.e.getHours()===0?'24:00':ft(w.e);
+        dayEl.innerHTML=`<div class="wd-label">${day}曜</div><div class="wd-date">${dat.getMonth()+1}/${dat.getDate()}</div>${tTypeHtml}<div class="wd-best">${ft(w.s)}頃〜${eL}頃</div><div class="wd-score">スコア ${w.sc}点</div><div class="wd-reason">${w.r}</div>`;
+      } else {
+        dayEl.innerHTML=`<div class="wd-label">${day}曜</div><div class="wd-date">${dat.getMonth()+1}/${dat.getDate()}</div>${tTypeHtml}<div class="wd-reason">好条件少ない日</div>`;
+      }
+      gridEl.appendChild(dayEl);
+    }
+    section.appendChild(gridEl);
+    el.appendChild(section);
+  }
+}
+
+// ========================================================
+// UI・日付・アドバイス
+// ========================================================
+let userLat=null, userLng=null, userLabel='';
+let selectedDay = null;
+
+function _todayMidnight(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+
+function _dayLabel(d){
+  const today = _todayMidnight();
+  const diff = Math.round((d - today) / 86400000);
+  const dow = ['日','月','火','水','木','金','土'][d.getDay()];
+  const base = `${d.getMonth()+1}月${d.getDate()}日（${dow}）`;
+  if(diff===0) return '今日 ' + base;
+  if(diff===1) return '明日 ' + base;
+  if(diff===2) return '明後日 ' + base;
+  if(diff<0)   return `${Math.abs(diff)}日前 ` + base;
+  return `${diff}日後 ` + base;
+}
+
+function _updateDateNav(){
+  const today = _todayMidnight();
+  const diff = Math.round((selectedDay - today)/86400000);
+  document.getElementById('date-nav-label').textContent = _dayLabel(selectedDay);
+  for(let i=0;i<3;i++){
+    const chip = document.getElementById('chip-'+i);
+    if(chip) chip.classList.toggle('active', diff===i);
+  }
+  // 📅ボタン：今日/明日/明後日以外の日付選択中は紫ハイライト
+  const calBtn = document.getElementById('cal-btn');
+  if(calBtn) calBtn.classList.toggle('has-custom', diff>2 || diff<0);
+}
+
+function shiftDay(delta){
+  const today=_todayMidnight();
+  const d = new Date(selectedDay); d.setDate(d.getDate() + delta);
+  const diff=Math.round((d-today)/86400000);
+  if(diff<0||diff>MAX_FUTURE_DAYS) return;
+  selectedDay = d; _updateDateNav(); selectedWinMs=null; renderWStrip(); renderFcDays(); renderAll();
+}
+function jumpDay(offset){
+  const d = _todayMidnight(); d.setDate(d.getDate() + offset);
+  selectedDay = d; _updateDateNav(); selectedWinMs=null; renderWStrip(); renderFcDays(); renderAll();
+}
+
+// ── カレンダーピッカー ──
+let _dpYear = null, _dpMonth = null;
+
+function toggleCalendar(){
+  const pop = document.getElementById('date-popover');
+  const isOpen = pop.classList.contains('open');
+  if(isOpen){ pop.classList.remove('open'); return; }
+  // 現在のselectedDayの月を表示
+  _dpYear = selectedDay.getFullYear();
+  _dpMonth = selectedDay.getMonth();
+  _renderCalendar();
+  pop.classList.add('open');
+  // ポップオーバー外クリックで閉じる（次イベントループで登録）
+  setTimeout(()=>{
+    document.addEventListener('click', _dpOutsideClick, {once:true});
+  }, 0);
+}
+
+function _dpOutsideClick(e){
+  const pop = document.getElementById('date-popover');
+  const btn = document.getElementById('cal-btn');
+  if(pop && !pop.contains(e.target) && !btn.contains(e.target)){
+    pop.classList.remove('open');
+  } else if(pop && pop.classList.contains('open')){
+    // まだ開いているなら再度リスナー登録
+    document.addEventListener('click', _dpOutsideClick, {once:true});
+  }
+}
+
+function dpShiftMonth(delta){
+  _dpMonth += delta;
+  if(_dpMonth < 0){ _dpMonth=11; _dpYear--; }
+  if(_dpMonth > 11){ _dpMonth=0; _dpYear++; }
+  _renderCalendar();
+}
+
+function _renderCalendar(){
+  const today = _todayMidnight();
+  const label = document.getElementById('dp-month-label');
+  label.textContent = `${_dpYear}年${_dpMonth+1}月`;
+
+  const grid = document.getElementById('dp-days');
+  grid.innerHTML = '';
+
+  // 月の1日の曜日と月末日
+  const firstDay = new Date(_dpYear, _dpMonth, 1).getDay(); // 0=日
+  const lastDate = new Date(_dpYear, _dpMonth+1, 0).getDate();
+
+  // 前月の空白マス
+  for(let i=0;i<firstDay;i++){
+    const el=document.createElement('button');
+    el.className='dp-day out'; el.disabled=true;
+    el.innerHTML=' ';
+    grid.appendChild(el);
+  }
+
+  for(let d=1; d<=lastDate; d++){
+    const date = new Date(_dpYear, _dpMonth, d);
+    const diffDays = Math.round((date - today)/86400000);
+    const isPast = diffDays < 0;
+    const isTooFar = diffDays > MAX_FUTURE_DAYS;
+    const isToday = diffDays === 0;
+    const isSelected = selectedDay && date.getTime()===selectedDay.getTime();
+
+    // 釣れどき指数（正午）
+    const noon = new Date(_dpYear, _dpMonth, d, 12, 0, 0);
+    const sc = fishScore(noon).score;
+    const scoreCol = sColor(sc);
+
+    const el=document.createElement('button');
+    el.className='dp-day'+(isToday?' today':'')+(isSelected?' selected':'')+(isPast?' past':'')+(isTooFar?' out':'');
+    el.innerHTML=`<div>${d}</div><div class="dp-score" style="color:${isSelected?'#cef':scoreCol}">${sc}点</div>`;
+
+    if(!isPast&&!isTooFar){
+      el.onclick=()=>{
+        selectedDay = date;
+        _updateDateNav();
+        selectedWinMs = null;
+        renderWStrip(); renderFcDays(); renderAll();
+        document.getElementById('date-popover').classList.remove('open');
+        // 📅ボタンのスタイル：今日/明日/明後日以外はハイライト
+        const diff=Math.round((selectedDay-today)/86400000);
+        document.getElementById('cal-btn').classList.toggle('has-custom', diff>2);
+      };
+    } else {
+      el.disabled=true;
+      if(isTooFar) el.title=`${MAX_FUTURE_DAYS}日先まで選択できます`;
+    }
+    grid.appendChild(el);
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('loc-input').addEventListener('keydown',e=>{if(e.key==='Enter')geocodeAndRun();});
+});
+
+let _nominatimLastAt=0;
+async function _nominatimSearch(query){
+  const cacheKey='tsuredoki-geo:'+query.toLowerCase();
+  try{ const cached=JSON.parse(localStorage.getItem(cacheKey)||'null'); if(cached&&Date.now()-cached.at<30*86400000) return cached.data; }catch(_e){}
+  const wait=Math.max(0,1100-(Date.now()-_nominatimLastAt));
+  if(wait) await new Promise(r=>setTimeout(r,wait));
+  _nominatimLastAt=Date.now();
+  const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),10000);
+  try{
+    const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=1&countrycodes=jp&accept-language=ja`;
+    const r=await fetch(url,{signal:ctrl.signal});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data=await r.json();
+    try{localStorage.setItem(cacheKey,JSON.stringify({at:Date.now(),data}));}catch(_e){}
+    return data;
+  }finally{clearTimeout(tid);}
+}
+
+async function geocodeAndRun(){
+  const q=document.getElementById('loc-input').value.trim();
+  if(!q)return;
+  const res=document.getElementById('loc-result');
+  res.textContent='🔍 検索中...';
+  try{
+    let data=await _nominatimSearch(q+' 長崎');
+    if(!data.length) data=await _nominatimSearch(q);
+    if(!data.length){res.textContent='⚠️ 見つかりませんでした。市町名や駅名を少し詳しく入力してください。';return;}
+    userLat=parseFloat(data[0].lat); userLng=parseFloat(data[0].lon);
+    userLabel=data[0].display_name.split(',').slice(0,2).join('');
+    res.textContent=`📍 出発地：${userLabel}`;
+    renderDepartAdvice();
+  }catch(e){ res.textContent='⚠️ 検索エラー。ネット接続を確認してください。'; }
+}
+
+function useGPS(){
+  const res=document.getElementById('loc-result');
+  if(!navigator.geolocation){res.textContent='⚠️ ブラウザが位置情報に対応していません';return;}
+  res.textContent='📡 GPS取得中...';
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      userLat=pos.coords.latitude; userLng=pos.coords.longitude;
+      userLabel='現在地';
+      res.textContent=`📍 出発地：現在地（${userLat.toFixed(4)}, ${userLng.toFixed(4)}）`;
+      renderDepartAdvice();
+    },
+    ()=>{res.textContent='⚠️ 位置情報を取得できませんでした。ブラウザ設定を確認してください。'}
+  );
+}
+
+function haversine(la1,lo1,la2,lo2){
+  const R=6371,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function estDriveMin(dist){return Math.round(dist*1.4/35*60);}
+
+function toggleDA(row){ row.closest('.da-item').classList.toggle('open'); }
+
+async function renderDepartAdvice(){
+  if(!userLat||!userLng)return;
+  const el=document.getElementById('depart-list');
+  el.innerHTML='<div class="loading-text">計算中...</div>';
+  const now=new Date();
+  const withDist=SPOTS.filter(sp=>sp.type!=='shop').map(sp=>({...sp,dist:haversine(userLat,userLng,sp.lat,sp.lng)})).sort((a,b)=>a.dist-b.dist);
+  
+  const results=withDist.filter(sp=>sp.type!=='shop').map(sp=>{
+    const drMin=estDriveMin(sp.dist);
+    const arriveNow=new Date(now.getTime()+drMin*60000);
+    const areaId=sp.tideArea||selectedAreaId;
+    const {score:scNow}=fishScoreForArea(arriveNow,areaId,{includeWeather:false});
+    let best={score:0,depart:null,arrive:null,minsFromNow:0};
+    for(let m=0;m<=8*60;m+=15){
+      const dep=new Date(now.getTime()+m*60000);
+      const arr=new Date(dep.getTime()+drMin*60000);
+      const {score:sc}=fishScoreForArea(arr,areaId,{includeWeather:false});
+      if(sc>best.score)best={score:sc,depart:dep,arrive:arr,minsFromNow:m};
+    }
+    return{sp,drMin,scNow,arriveNow,best};
+  });
+  results.sort((a,b)=>b.best.score-a.best.score);
+  
+  el.innerHTML='';
+  results.forEach(({sp,drMin,scNow,arriveNow,best},idx)=>{
+    const m=best.minsFromNow;
+    const scoreDiff=best.score-scNow;
+    const drLabel=drMin>=60?`${Math.floor(drMin/60)}時間${drMin%60?drMin%60+'分':''}`:drMin+'分';
+    const ttInfo=tideType(now);
+    
+    let scoreClass=best.score>=65?'great':best.score>=45?'so-so':'norm';
+    let departTxt='';
+    if(scNow>=80||m<=10) departTxt='✅ 今すぐ出発！';
+    else if(m<=120) departTxt=`⏰ ${ft(best.depart)}出発`;
+    else departTxt=`ベスト ${ft(best.depart)}`;
+
+    let mainLine='', subLine='';
+    if(scNow>=72||m<=10){
+      mainLine=`<span style="color:#7dffb3;font-weight:700">✅ 今すぐ出発！</span> ${ft(arriveNow)}着 → スコア <b style="color:#2ecc71">${scNow}点</b>`;
+      subLine='今がベストに近い時間帯です。';
+    } else if(m<=120){
+      mainLine=`<span style="color:#f39c12;font-weight:700">⏰ ${ft(best.depart)} 出発</span>（今から${m}分後）`;
+      subLine=`${ft(best.arrive)}着でスコア <b style="color:#f39c12">${best.score}点</b> のタイミング`;
+    } else {
+      mainLine=`今日のベスト出発は <b style="color:#fff">${ft(best.depart)}</b>（今から${m}分後）`;
+      subLine=`${ft(best.arrive)}着でスコア${best.score}点。今すぐだと到着時${scNow}点。`;
+    }
+
+    const item=document.createElement('div');
+    item.className='da-item'+(best.score>=65?' great':best.score>=45?' so-so':'');
+    item.innerHTML=`
+      <button class="da-row" type="button" aria-expanded="false">
+        <span class="da-rank">${idx+1}</span>
+        <span class="da-name">${sp.name}</span>
+        <span class="da-score-badge ${scoreClass}">${best.score}点</span>
+        <span class="da-depart-txt">${departTxt}</span>
+        <span class="da-chevron">▼</span>
+      </button>
+      <div class="da-detail">
+        <div class="da-drive">🚗 概算約<b style="color:#fff">${drLabel}</b>（直線${Math.round(sp.dist)}km）</div>
+        <div class="da-advice-main">${mainLine}</div>
+        <div class="da-advice-sub">${subLine}</div>
+        <div class="da-fish">🐟 ${sp.fish.join('・')}</div>
+      </div>`;
+    const row=item.querySelector('.da-row');
+    row.addEventListener('click',()=>{
+      toggleDA(row);
+      row.setAttribute('aria-expanded',String(item.classList.contains('open')));
+    });
+    el.appendChild(item);
+  });
+}
+
+// ========================================================
+// 潮位グラフ（上段：潮汐曲線 / 下段：釣れどき指数バー）
+// ========================================================
+function drawCurve(now){
+  const cv=document.getElementById('tide-canvas');
+  const W=cv.offsetWidth, H=210;
+  if(!W) return;
+  cv.width=W; cv.height=H;
+  cv.style.height = H+'px';
+  const ctx=cv.getContext('2d');
+
+  // レイアウト
+  const LABEL_W=32;
+  const TIDE_TOP=8, TIDE_H=118;          // 上段：潮汐
+  const SEP_Y=TIDE_TOP+TIDE_H+4;         // 区切り線
+  const SCORE_TOP=SEP_Y+6, SCORE_H=48;   // 下段：釣れどき指数
+  const TIME_Y=SCORE_TOP+SCORE_H+14;     // 時刻ラベル
+
+  const plotW=W-LABEL_W;
+  const toX=x=>LABEL_W+x*plotW;
+  const t0=new Date(now); t0.setHours(0,0,0,0);
+
+  ctx.fillStyle='#071525'; ctx.fillRect(0,0,W,H);
+
+  // ── 上段：潮汐曲線 ──
+  const pts=[];
+  for(let m=0;m<=24*60;m+=15) pts.push({x:m/(24*60),h:tideH(new Date(t0.getTime()+m*60000))});
+  const minH=Math.min(...pts.map(p=>p.h)), maxH=Math.max(...pts.map(p=>p.h)), rng=maxH-minH||1;
+  const toY=h=>TIDE_TOP+TIDE_H-((h-minH)/rng)*TIDE_H;
+
+  // グリッド・潮位軸
+  ctx.font='9px sans-serif'; ctx.textAlign='right';
+  const minCm=Math.round(minH*100), maxCm=Math.round(maxH*100), gridStep=50;
+  for(let cm=Math.ceil(minCm/gridStep)*gridStep; cm<=maxCm+10; cm+=gridStep){
+    const h=cm/100, y=toY(h);
+    if(y<TIDE_TOP-2||y>TIDE_TOP+TIDE_H+2) continue;
+    ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(LABEL_W,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.fillStyle='#3a6a8a'; ctx.fillText(cm+'cm',LABEL_W-3,y+3);
+  }
+  ctx.textAlign='left';
+
+  // 潮汐グラデーション面
+  const grad=ctx.createLinearGradient(0,TIDE_TOP,0,TIDE_TOP+TIDE_H);
+  grad.addColorStop(0,'rgba(41,128,185,.55)'); grad.addColorStop(1,'rgba(21,68,125,.05)');
+  ctx.beginPath(); ctx.moveTo(toX(pts[0].x),TIDE_TOP+TIDE_H); ctx.lineTo(toX(pts[0].x),toY(pts[0].h));
+  for(let i=1;i<pts.length;i++) ctx.lineTo(toX(pts[i].x),toY(pts[i].h));
+  ctx.lineTo(toX(pts[pts.length-1].x),TIDE_TOP+TIDE_H); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+
+  // 潮汐ライン
+  ctx.beginPath(); ctx.moveTo(toX(pts[0].x),toY(pts[0].h));
+  for(let i=1;i<pts.length;i++) ctx.lineTo(toX(pts[i].x),toY(pts[i].h));
+  ctx.strokeStyle='#2980b9'; ctx.lineWidth=2; ctx.stroke();
+
+  // 満干潮マーク
+  const tides=findTides(now);
+  ctx.font='9px sans-serif';
+  for(const t of tides){
+    const tx=toX((t.time.getHours()*60+t.time.getMinutes())/(24*60));
+    const ty=toY(t.h); const isHigh=t.type==='high';
+    ctx.fillStyle=isHigh?'#7dccff':'#ffb07d'; ctx.textAlign='center';
+    ctx.fillText(isHigh?'▲':'▽', tx, isHigh?ty-4:ty+10);
+    ctx.fillStyle='#7eb8d4'; ctx.fillText(ft(t.time), tx, isHigh?ty-13:ty+20);
+  }
+  ctx.textAlign='left';
+
+  // おすすめ時間帯ハイライト（選択中は強調、非選択は減光）
+  const wins2=bestWindows(now);
+  const hasSelected=selectedWinMs!==null;
+  for(const w of wins2){
+    const x1=toX((w.s.getHours()*60+w.s.getMinutes())/(24*60));
+    const eMin=w.e.getHours()===0?24*60:w.e.getHours()*60+w.e.getMinutes();
+    const x2=toX(Math.min(eMin,24*60)/(24*60));
+    const isSelected=w.s.getTime()===selectedWinMs;
+    const isGood=w.sc>=65;
+    if(hasSelected&&!isSelected){
+      // 非選択：薄く暗く
+      ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(x1,TIDE_TOP,x2-x1,TIDE_H);
+    } else {
+      // 選択中 or 未選択時（通常）
+      const bgAlpha=isSelected?.28:.10;
+      const barAlpha=isSelected?1:.55;
+      const barH=isSelected?5:3;
+      ctx.fillStyle=isGood?`rgba(46,204,113,${bgAlpha})`:`rgba(243,156,18,${bgAlpha*.9})`;
+      ctx.fillRect(x1,TIDE_TOP,x2-x1,TIDE_H);
+      ctx.fillStyle=isGood?`rgba(46,204,113,${barAlpha})`:`rgba(243,156,18,${barAlpha})`;
+      ctx.fillRect(x1,TIDE_TOP,x2-x1,barH);
+      if(isSelected){
+        // 選択中は左右に縦線
+        ctx.strokeStyle=isGood?'rgba(46,204,113,.9)':'rgba(243,156,18,.9)';
+        ctx.lineWidth=2; ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x1,TIDE_TOP); ctx.lineTo(x1,TIDE_TOP+TIDE_H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x2,TIDE_TOP); ctx.lineTo(x2,TIDE_TOP+TIDE_H); ctx.stroke();
+      }
+    }
+  }
+
+  // 区切り線
+  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(LABEL_W,SEP_Y); ctx.lineTo(W,SEP_Y); ctx.stroke();
+
+  // ── 下段：釣れどき指数バー ──
+  // ラベル
+  ctx.font='bold 8px sans-serif'; ctx.fillStyle='#f1c40f'; ctx.textAlign='left';
+  ctx.fillText('⭐釣れどき', 1, SCORE_TOP+10);
+
+  const hourScores=[];
+  for(let h=0;h<24;h++){
+    const t=new Date(t0.getTime()+h*3600000);
+    hourScores.push(fishScore(t).score);
+  }
+  const BAR_W=plotW/24;
+  // 選択ウィンドウの時間範囲を特定
+  let selStartH=-1, selEndH=-1;
+  if(selectedWinMs){
+    const sw=wins2.find(w=>w.s.getTime()===selectedWinMs);
+    if(sw){ selStartH=sw.s.getHours(); selEndH=sw.e.getHours()===0?24:sw.e.getHours(); }
+  }
+  for(let h=0;h<24;h++){
+    const sc=hourScores[h];
+    const bh=Math.round((sc/100)*SCORE_H);
+    const x=toX(h/24);
+    const inSelected=selectedWinMs&&h>=selStartH&&h<selEndH;
+    const _sc=sColor(sc); const col=_sc==='#2ecc71'?'#2ecc71':_sc==='#f39c12'?'#f39c12':_sc==='#e67e22'?'#2980b9':'#1a3050';
+    // バー背景
+    ctx.fillStyle=inSelected?'rgba(255,255,255,.10)':'rgba(255,255,255,.03)';
+    ctx.fillRect(x+1,SCORE_TOP,BAR_W-2,SCORE_H);
+    // バー本体（選択外は暗く）
+    ctx.fillStyle=selectedWinMs&&!inSelected?'rgba(100,100,100,.3)':col;
+    ctx.fillRect(x+1,SCORE_TOP+SCORE_H-bh,BAR_W-2,bh);
+    // 選択中or75以上で数値表示
+    if(sc>=57&&(inSelected||!selectedWinMs)){
+      ctx.font='bold 8px sans-serif'; ctx.fillStyle=inSelected?'#fff':'rgba(255,255,255,.7)';
+      ctx.textAlign='center';
+      ctx.fillText(sc, x+BAR_W/2, SCORE_TOP+SCORE_H-bh-2);
+    }
+  }
+  ctx.textAlign='left';
+
+  // 現在時刻ライン（今日のみ）
+  const _realNow=new Date();
+  const _isTodayGraph=now.toDateString()===_realNow.toDateString();
+  if(_isTodayGraph){
+    const nx=toX((_realNow.getHours()*60+_realNow.getMinutes())/(24*60));
+    ctx.beginPath(); ctx.moveTo(nx,TIDE_TOP); ctx.lineTo(nx,SCORE_TOP+SCORE_H);
+    ctx.strokeStyle='#2ecc71'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#2ecc71'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('今', nx, SCORE_TOP+SCORE_H+11);
+  }
+
+  // 時刻ラベル
+  ctx.font='9px sans-serif';
+  for(const hr of [0,6,12,18]){
+    const x=toX(hr/24);
+    ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(x,TIDE_TOP,1,TIDE_H);
+    ctx.fillStyle='#3a6a8a'; ctx.textAlign='left';
+    ctx.fillText(hr+':00', x+2, TIME_Y);
+  }
+  ctx.textAlign='right'; ctx.fillStyle='#3a6a8a';
+  ctx.fillText('24:00', W, TIME_Y);
+  ctx.textAlign='left';
+}
+
+// ========================================================
+// エリア選択
+// ========================================================
+function initAreaSelector(){
+  const el=document.getElementById('area-selector'); if(!el) return;
+  for(const a of AREAS){
+    const btn=document.createElement('button');
+    btn.className='date-chip'+(a.id===selectedAreaId?' active':'');
+    btn.dataset.area=a.id;
+    btn.textContent=a.name; btn.setAttribute('aria-pressed',String(a.id===selectedAreaId));
+    btn.onclick=()=>selectArea(a.id);
+    el.appendChild(btn);
+  }
+}
+function selectArea(id){
+  selectedAreaId=id;
+  const a=AREAS.find(x=>x.id===id);
+  AREA_LAG_MS=(a?.lagMin||0)*60000;
+  AREA_AMP_RATIO=a?.ampRatio??1.0;
+  AREA_LAT=a?.lat??32.90; AREA_LNG=a?.lng??129.90;
+  const cacheKey=`${AREA_LAT.toFixed(2)},${AREA_LNG.toFixed(2)}`;
+  weatherData=weatherCache[cacheKey]||null;
+  Object.keys(_sunCache).forEach(k=>delete _sunCache[k]);
+  if(!weatherData){
+    const ws=document.getElementById('wstrip'); if(ws) ws.innerHTML='<div style="padding:10px 4px;font-size:.73rem;color:#3a6a8a">天気データ取得中...</div>';
+    const fd=document.getElementById('fc-days'); if(fd) fd.innerHTML='';
+  }
+  document.querySelectorAll('#area-selector button').forEach(b=>{const on=b.dataset.area===id;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
+  try{localStorage.setItem('tsuredoki-area',id);}catch(_e){}
+  _clearScoreCaches();
+  _updateTideSourceLabel(); // 地域ごとの公式データソース表示
+  const wtl=document.getElementById('weather-title');
+  if(wtl) wtl.textContent=`⛅ ${a?.name||'長崎'}周辺の天気予報`;
+  renderAll();       // 潮汐画面を即更新（天気取得と独立）
+  renderMapMarkers(); // 地図スコアも即更新
+  fetchWeather();    // エリアごとに気象座標で再取得（非同期）
+}
+
+// ========================================================
+// マップ
+// ========================================================
+function initMap(){
+  const mapEl=document.getElementById('map');
+  if(typeof L==='undefined'){
+    if(mapEl) mapEl.innerHTML='<div class="map-fallback">地図ライブラリを読み込めませんでした。<br>通信環境を確認して再読み込みしてください。</div>';
+    _setHealth('map-health','🗺️ 地図：読込失敗','bad');
+    return;
+  }
+  try{
+    leafletMap=L.map('map',{zoomControl:true}).setView([33.05,129.75],9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:18}).addTo(leafletMap);
+    renderMapMarkers(); initFishFilter();
+    _setHealth('map-health','🗺️ 地図：OpenStreetMap','ok');
+  }catch(e){
+    console.error('地図初期化失敗',e);
+    if(mapEl) mapEl.innerHTML='<div class="map-fallback">地図を初期化できませんでした。<br>他の機能はそのまま利用できます。</div>';
+    _setHealth('map-health','🗺️ 地図：初期化失敗','bad');
+  }
+}
+
+function spotScore(sp, base, rate, dir){
+  let bonus=0; const td=sp.tide||'';
+  if(dir>0 && (td.includes('上げ')||td.includes('干潮'))) bonus+=8;
+  if(dir<0 && (td.includes('下げ')||td.includes('満潮'))) bonus+=8;
+  // 魚種ボタンは絞り込み専用（スコア加算なし）
+  return Math.max(0,Math.min(100,base+bonus));
+}
+
+
+
+// 特定エリアIDでfishScoreを評価（地図用・一時的にエリア変数を切替）
+function fishScoreForArea(d, areaId, options={}){
+  const _savedId=selectedAreaId, _savedLag=AREA_LAG_MS, _savedAmp=AREA_AMP_RATIO;
+  const _a=AREAS.find(x=>x.id===areaId)||AREAS[0];
+  selectedAreaId=areaId; AREA_LAG_MS=(_a.lagMin||0)*60000; AREA_AMP_RATIO=_a.ampRatio??1.0;
+  const result=fishScore(d,options);
+  selectedAreaId=_savedId; AREA_LAG_MS=_savedLag; AREA_AMP_RATIO=_savedAmp;
+  return result;
+}
+
+function renderMapMarkers(){
+  if(!leafletMap)return;
+  Object.values(mapMarkers).forEach(m=>leafletMap.removeLayer(m));
+  mapMarkers={};
+  const _now=new Date();
+  for(const sp of SPOTS){
+    if(activeFishFilter!=='全て' && !sp.fish.includes(activeFishFilter)) continue;
+    const _aId=sp.tideArea||selectedAreaId;
+    const {score:baseScore,rate:_spRate,dir:_spDir}=fishScoreForArea(_now,_aId,{includeWeather:false});
+    const sc=spotScore(sp,baseScore,_spRate,_spDir);
+    const col=sColor(sc), sz=sc>=80?36:sc>=65?30:sc>=45?26:22;
+    const icon=L.divIcon({
+      className:'',
+      html:`<div style="background:${col};color:#fff;border-radius:50%;width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;font-size:${sz===34?15:13}px;box-shadow:0 2px 8px rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.35); transition:.2s;">${sp.icon}</div>`,
+      iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]
+    });
+    const marker=L.marker([sp.lat,sp.lng],{icon}).addTo(leafletMap);
+    marker.on('click',()=>showSpotPanel(sp));
+    mapMarkers[sp.id]=marker;
+  }
+}
+
+function toggleDetails(){
+  const sec=document.getElementById('detail-section'), arrow=document.getElementById('detail-arrow'), open=sec.style.display==='none'||sec.style.display==='';
+  sec.style.display=open?'block':'none'; arrow.textContent=open?'▲ 閉じる':'▼ 開く';
+  const btn=document.getElementById('detail-toggle'); if(btn) btn.setAttribute('aria-expanded',String(open));
+  if(open) setTimeout(()=>drawCurve(selectedDay||new Date()),50);
+}
+
+function initFishFilter(){
+  const el=document.getElementById('fish-btns'); if(!el)return;
+  for(const cat of FISH_CATS){
+    const btn=document.createElement('button');
+    btn.className='fish-btn'+(cat.id==='全て'?' active':''); btn.dataset.cat=cat.id; btn.setAttribute('aria-pressed',String(cat.id==='全て'));
+    btn.innerHTML=`<span class="fb-icon">${cat.icon}</span><span class="fb-label">${cat.label}</span>`;
+    btn.onclick=()=>{
+      activeFishFilter=cat.id;
+      document.querySelectorAll('.fish-btn').forEach(b=>{const on=b.dataset.cat===cat.id;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
+      renderMapMarkers();
+      const msg=document.getElementById('fish-selected-msg'), tip=FISH_TIPS[cat.id];
+      if(msg){ if(tip){msg.textContent=tip;msg.classList.add('show');} else{msg.classList.remove('show');} }
+    };
+    el.appendChild(btn);
+  }
+}
+
+function _copyAddr(btn,txt){
+  navigator.clipboard.writeText(txt).then(()=>{
+    const orig=btn.textContent; btn.textContent='✅ コピーした！';
+    setTimeout(()=>btn.textContent=orig,1800);
+  }).catch(()=>{
+    // fallback: select hidden textarea
+    const ta=document.createElement('textarea');
+    ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const orig=btn.textContent; btn.textContent='✅ コピーした！';
+    setTimeout(()=>btn.textContent=orig,1800);
+  });
+}
+function showSpotPanel(sp){
+  const panel=document.getElementById('spot-panel');
+  const gmUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sp.address||sp.name+' '+sp.area)}`;
+  const content=document.createElement('div'); content.className='sp-content';
+  const name=document.createElement('div'); name.className='sp-name'; name.textContent=sp.name; content.appendChild(name);
+  const area=document.createElement('div'); area.className='sp-area'; area.textContent=sp.area; content.appendChild(area);
+  if(sp.address){
+    const row=document.createElement('div'); row.className='sp-addr';
+    const txt=document.createElement('span'); txt.className='sp-addr-txt'; txt.textContent=sp.address;
+    const copy=document.createElement('button'); copy.className='sp-copy-btn'; copy.type='button'; copy.textContent='📋 コピー'; copy.addEventListener('click',()=>_copyAddr(copy,sp.address));
+    row.append(txt,copy); content.appendChild(row);
+  }
+  const fish=document.createElement('div'); fish.className='sp-fish';
+  sp.fish.forEach(v=>{const x=document.createElement('span');x.textContent=v;fish.appendChild(x);}); content.appendChild(fish);
+  const tags=document.createElement('div'); tags.className='sp-tags';
+  sp.tags.forEach(v=>{const x=document.createElement('span');x.textContent=v;tags.appendChild(x);}); content.appendChild(tags);
+  const tide=document.createElement('div'); tide.className='sp-tide-txt'; tide.textContent='🌊 '+sp.tide; content.appendChild(tide);
+  const link=document.createElement('a'); link.className='sp-gmaps-btn'; link.href=gmUrl; link.target='_blank'; link.rel='noopener noreferrer'; link.textContent='🗺️ Googleマップで開く →'; content.appendChild(link);
+  panel.replaceChildren(content);
+}
+
+// ========================================================
+// BOOT
+// ========================================================
+window.addEventListener('DOMContentLoaded',async()=>{
+  selectedDay = _todayMidnight();
+  try{ const saved=localStorage.getItem('tsuredoki-area'); if(AREAS.some(a=>a.id===saved)) selectedAreaId=saved; }catch(_e){}
+  const initialArea=AREAS.find(a=>a.id===selectedAreaId)||AREAS[0];
+  AREA_LAG_MS=(initialArea.lagMin||0)*60000; AREA_AMP_RATIO=initialArea.ampRatio??1; AREA_LAT=initialArea.lat; AREA_LNG=initialArea.lng;
+  const wtl=document.getElementById('weather-title'); if(wtl) wtl.textContent=`⛅ ${initialArea.name}周辺の天気予報`;
+  _updateDateNav();
+  initAreaSelector();
+  initMap();
+  renderAll(); // 初期描画（調和定数ベース）
+  const [jmaResult]=await Promise.allSettled([initJMA(),fetchWeather()]);
+  if(jmaResult.status==='fulfilled'&&jmaResult.value){ renderAll(); renderBeginnerCard(); _updateTideSourceLabel(); }
+  renderWStrip(); renderFcDays(); renderAll();
+  setInterval(()=>{renderAll();renderMapMarkers();},5*60*1000);
+});
+</script>
+</body>
+</html>
