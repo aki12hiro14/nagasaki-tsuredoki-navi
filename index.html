@@ -10,7 +10,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif; background:#0a1628; color:#e8f4fd; min-height:100vh; padding-bottom:env(safe-area-inset-bottom); -webkit-font-smoothing:antialiased; }
+html { font-size: 16px; }
+/* スマホは全体を比例拡大して可読性を上げる（rem基準テキストがまとめて大きくなる） */
+@media(max-width:600px){ html{ font-size:18px; } }
+@media(max-width:360px){ html{ font-size:17px; } }
+body { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif; background:#0a1628; color:#e8f4fd; min-height:100vh; padding-bottom:env(safe-area-inset-bottom); -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%; }
 
 header { background:linear-gradient(135deg,#0d2137,#0a3d62); padding:14px 18px 8px; border-bottom:1px solid #1a4a6e; }
 .hdr-top { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
