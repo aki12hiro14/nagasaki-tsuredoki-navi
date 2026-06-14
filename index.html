@@ -133,7 +133,7 @@ header { background:linear-gradient(135deg,#ffffff,#2c93cf); padding:14px 18px 8
 .bd-pts{font-size:.76rem;font-weight:700;color:#1670b5;min-width:38px;text-align:right;}
 
 /* 天気3日 */
-.fc-day{flex:1;min-width:90px;background:#f1f6fb;border-radius:11px;padding:10px 8px;text-align:center;border:1px solid #e6edf4;}
+.fc-day{min-width:0;overflow:hidden;background:#f1f6fb;border-radius:11px;padding:10px 6px;text-align:center;border:1px solid #e6edf4;}
 .fc-day.today{border-color:#2176b8;} .fd-date{font-size:.68rem;color:#4a7188;margin-bottom:3px;} .fd-icon{font-size:1.7rem;margin:3px 0;}
 .fd-desc{font-size:.65rem;color:#3f6378;margin-bottom:5px;} .fd-temps{font-size:.8rem;font-weight:700;} .fd-max{color:#bf5125;} .fd-min{color:#1670b5;}
 .fd-wind{font-size:.68rem;color:#3f6378;margin-top:3px;} .fd-rain{font-size:.68rem;color:#1670b5;margin-top:2px;}
@@ -369,7 +369,8 @@ header{ background:linear-gradient(135deg,#1f6fb0,#33a3d6); border-bottom:1px so
   .da-fish,.da-depart-txt,.da-chevron{ font-size:.76rem; }
   .hbar-leg{ font-size:.78rem; }
   .wh{ font-size:.72rem; min-width:58px; }
-  .fc-day{ flex:1 1 92px; max-width:48%; }
+  .fc-day{ min-width:0; padding:9px 5px; }
+  .fd-desc,.fd-fish{ white-space:normal; word-break:break-word; }
   .wh .wi{ font-size:1.25rem; }
   .beta-notice{ font-size:.8rem; line-height:1.6; }
   footer{ font-size:.74rem; line-height:1.7; }
@@ -382,6 +383,11 @@ header{ background:linear-gradient(135deg,#1f6fb0,#33a3d6); border-bottom:1px so
   .da-row{ min-height:52px; }
   .fish-btn{ min-height:60px; }
 }
+
+/* 天気カードの横はみ出し封じ込め（保険） */
+#weather-card,#weather-card .acc-body,#weather-card .section-hdr{ max-width:100%; min-width:0; }
+#weather-card #fc-days{ min-width:0; }
+.wstrip-scroll{ max-width:100%; }
 </style>
 </head>
 <body>
@@ -436,7 +442,7 @@ header{ background:linear-gradient(135deg,#1f6fb0,#33a3d6); border-bottom:1px so
         <button class="date-nav-arrow" onclick="shiftDay(1)">▶</button>
       </div>
     </div>
-    <div id="fc-days" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
+    <div id="fc-days" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;max-width:100%;"></div>
     <div class="wstrip-scroll">
       <div class="wstrip-inner" id="wstrip" aria-live="polite"><div style="padding:10px 4px;font-size:.73rem;color:#5d7c90">天気データ取得中...</div></div>
     </div>
