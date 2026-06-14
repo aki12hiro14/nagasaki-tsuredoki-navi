@@ -283,11 +283,12 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline:3px solid r
   .card{padding:12px;border-radius:12px;}
   .section-hdr{align-items:stretch;}
   .section-hdr>.card-title{width:100%;}
-  .date-nav{width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:7px;}
-  .date-chips{grid-column:1/-1;grid-row:2;justify-content:center;}
-  .date-nav-label{grid-column:2;grid-row:1;min-width:0;align-self:center;}
-  .date-nav-arrow:first-child{grid-column:1;grid-row:1;}
-  .date-nav-arrow:last-child{grid-column:3;grid-row:1;}
+  /* 天気の日付ナビ：はみ出さないフレックス折り返し（◀ 日付 ▶／下段にチップ） */
+  .date-nav{width:100%;max-width:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+  .date-nav-arrow{flex:0 0 auto;order:0;}
+  .date-nav-label{flex:1 1 auto;order:0;text-align:center;min-width:0;align-self:center;}
+  .date-chips{order:9;flex:1 1 100%;justify-content:center;min-width:0;}
+  .date-popover{left:auto;right:0;min-width:0;width:min(280px,calc(100vw - 28px));max-width:calc(100vw - 28px);}
   .date-nav-arrow,.date-chip,.date-cal-btn{min-height:38px;}
   .score-compact{gap:12px;}
   .score-compact-num{min-width:64px;}
@@ -368,6 +369,7 @@ header{ background:linear-gradient(135deg,#1f6fb0,#33a3d6); border-bottom:1px so
   .da-fish,.da-depart-txt,.da-chevron{ font-size:.76rem; }
   .hbar-leg{ font-size:.78rem; }
   .wh{ font-size:.72rem; min-width:58px; }
+  .fc-day{ flex:1 1 92px; max-width:48%; }
   .wh .wi{ font-size:1.25rem; }
   .beta-notice{ font-size:.8rem; line-height:1.6; }
   footer{ font-size:.74rem; line-height:1.7; }
@@ -575,9 +577,12 @@ const SPOTS = [
   { id:'kabashima1', name:'樺島（野母崎）', tideArea:'kabashima', area:'長崎市野母崎', address:'長崎県長崎市野母崎樺島町', lat:32.561, lng:129.728,
     fish:['アジ','サバ','ブリ','カンパチ','メバル','アラカブ'], tags:['外洋','車でアクセス可','青物実績◎','潮通し抜群'],
     tide:'野母崎半島の先、橋を渡って車でアクセスできる島。外洋に面し潮通し抜群。アジ・サバ・青物（ブリ・カンパチ）の実績が高い。朝まずめの青物、夕〜夜のアジングが特におすすめ。', icon:'🐟' },
-  { id:'isahaya1', tideArea:'nagasaki', name:'有喜漁港', area:'諫早市有喜町', address:'長崎県諫早市有喜町', lat:32.795, lng:130.018,
+  { id:'isahaya1', tideArea:'isahaya', name:'有喜漁港', area:'諫早市有喜町', address:'長崎県諫早市有喜町', lat:32.795, lng:130.018,
     fish:['アジ','チヌ','キス','ハゼ'], tags:['港内','橘湾','足場よい','子ども可'],
     tide:'橘湾に面した漁港（諫早湾ではない）。上げ潮でアジが入ってくる。干潮時は浅くなるので上げ始めが狙い目。', icon:'🐟' },
+  { id:'nagasakigyo1', tideArea:'nagasakigyo', name:'長崎漁港（京泊）', area:'長崎市京泊', address:'長崎県長崎市京泊3丁目（長崎漁港）', lat:32.781, lng:129.822,
+    fish:['アジ','チヌ','メバル','アラカブ','サバ'], tags:['大型漁港','足場よい','常夜灯あり','アジング◎'],
+    tide:'長崎市北西・京泊の大型漁港。岸壁が長く足場が良い。常夜灯まわりの夜アジングや、上げ潮の回遊が狙い目。', icon:'🐟' },
   { id:'saikai1', name:'西海橋・針尾瀬戸', tideArea:'sasebo', area:'西海市', address:'長崎県西海市西彼町小迎郷（西海橋公園）', lat:33.155, lng:129.660,
     fish:['チヌ','スズキ','アラカブ','アジ'], tags:['橋下','流れが速い','転流前後向き'],
     tide:'流れが非常に速い。潮止まり（転流）の前後30分〜1時間が勝負。アジも転流後に動く。', icon:'🌀' },
@@ -597,10 +602,10 @@ const SPOTS = [
   { id:'omura1', tideArea:'omura', name:'川棚川河口', area:'大村湾北部・川棚町', address:'長崎県東彼杵郡川棚町百津郷（川棚港・川棚川河口）', lat:33.071, lng:129.883,
     fish:['チヌ','スズキ','ハゼ','キス'], tags:['河口','上げ潮向き','大村湾内','子ども可'],
     tide:'大村湾内（潮時・潮高は簡易補正試験値。地点差あり）。上げ始め〜上げ潮で反応が出やすい。', icon:'🐟' },
-  { id:'toamchi1', name:'戸町港・女神大橋下', tideArea:'toamchi', area:'長崎市戸町', address:'長崎県長崎市戸町（戸町港・女神大橋下）', lat:32.711, lng:129.839,
+  { id:'toamchi1', name:'戸町港・女神大橋下', tideArea:'nagasaki', area:'長崎市戸町', address:'長崎県長崎市戸町（戸町港・女神大橋下）', lat:32.711, lng:129.839,
     fish:['アジ','チヌ','メバル','アラカブ','スズキ'], tags:['漁港','常夜灯あり','橋下狙い','アジング◎','釣具店隣接'],
     tide:'女神大橋のふもと、戸町港エリア。橋脚まわりはチヌ・スズキが潜む好ポイント。常夜灯効果で夜のアジングも人気。上げ潮で小魚の回遊が増える。', icon:'🎣' },
-  { id:'toamchi2', name:'釣具のポイント長崎女神店', type:'shop', tideArea:'toamchi', area:'長崎市戸町4丁目', address:'〒850-0952 長崎県長崎市戸町4丁目27-35', lat:32.712, lng:129.841,
+  { id:'toamchi2', name:'釣具のポイント長崎女神店', type:'shop', tideArea:'nagasaki', area:'長崎市戸町4丁目', address:'〒850-0952 長崎県長崎市戸町4丁目27-35', lat:32.712, lng:129.841,
     fish:['アジ','チヌ','メバル','アラカブ'], tags:['釣具店','エサ購入','女神大橋近く'],
     tide:'釣具のポイント長崎女神店（〒850-0952 長崎市戸町4丁目27-35）。出発前のエサ・仕掛け購入に便利。周辺の戸町港・女神大橋下が主な釣り場。', icon:'🏪' },
   { id:'obama1', name:'富津港（小浜）', tideArea:'obama', area:'雲仙市小浜町富津', address:'〒854-0516 長崎県雲仙市小浜町富津（富津港）', lat:32.686, lng:130.196,
@@ -644,9 +649,10 @@ const REF = new Date('2000-01-01T00:00:00+09:00');
 // エリア別ラグ・振幅比・気象座標
 // ※ラグと振幅は気象庁・海保資料に基づく参考値。特に大村湾は佐世保港補正式（+2h55m・潮高比0.28）適用
 const AREAS = [
-  { id:'nagasaki', name:'長崎市',       lagMin:0,   ampRatio:1.0,  note:'長崎港基準',            lat:32.75,  lng:129.87  },
+  { id:'nagasaki', name:'長崎市（女神橋）',       lagMin:0,   ampRatio:1.0,  note:'長崎港基準',            lat:32.75,  lng:129.87  },
+  { id:'isahaya',  name:'諫早（有喜）',   lagMin:15,  ampRatio:0.98, note:'長崎港+15分（橘湾参考）',  lat:32.795, lng:130.018 },
+  { id:'nagasakigyo', name:'長崎漁港（京泊）', lagMin:0, ampRatio:1.0, note:'長崎港基準（京泊・参考）', lat:32.781, lng:129.822 },
   { id:'motogi',   name:'茂木',         lagMin:15,  ampRatio:0.98, note:'長崎港+15分（参考）',    lat:32.71,  lng:130.00  },
-  { id:'toamchi',  name:'戸町・女神橋', lagMin:5,   ampRatio:1.0,  note:'長崎港+5分（参考）',     lat:32.711, lng:129.839 },
   { id:'hirado',   name:'平戸',         lagMin:0,   ampRatio:1.0,  note:'気象庁・平戸瀬戸',       lat:33.37,  lng:129.55  },
   { id:'kabashima',name:'樺島（野母崎）',lagMin:0,  ampRatio:1.0,  note:'外洋・長崎港基準',       lat:32.561, lng:129.728 },
   { id:'obama',    name:'小浜（富津）', lagMin:25,  ampRatio:0.98, note:'長崎港+25分（橘湾東岸参考）', lat:32.686, lng:130.196 },
@@ -756,8 +762,9 @@ async function _loadJMA(year,st){
 // 地域ごとの潮位データソースラベル
 const _TIDE_SOURCE_LABELS={
   nagasaki:'気象庁・長崎港',
+  isahaya:'気象庁・長崎港を参考（橘湾）',
+  nagasakigyo:'気象庁・長崎港を参考（京泊）',
   motogi:'気象庁・長崎港を参考',
-  toamchi:'気象庁・長崎港を参考',
   hirado:'気象庁・平戸瀬戸',
   kabashima:'気象庁・長崎港を参考',
   obama:'気象庁・長崎港を参考（橘湾東岸）',
@@ -828,7 +835,7 @@ function tideH(d){
     } else if(id==='sasebo'){
       cm=_jmaHcm(d,'QD');
     } else {
-      // nagasaki/motogi/kabashima: NS基準 + ラグ
+      // nagasaki/isahaya/nagasakigyo/motogi/kabashima/obama: NS基準 + ラグ
       const eff=new Date(d.getTime()-AREA_LAG_MS);
       cm=_jmaHcm(eff,'NS');
     }
@@ -874,7 +881,7 @@ function _getOfficialTides(d){
       ...day.lows.map(e=>({time:mkTime(e.h,e.m),type:'low',h:e.v/100}))
     ].filter(e=>!isNaN(e.h)).sort((a,b)=>a.time-b.time);
   }
-  // nagasaki/motogi/toamchi/kabashima/obama → NS
+  // nagasaki/isahaya/nagasakigyo/motogi/kabashima/obama → NS
   const day=_getJMADay(d,'NS'); if(!day) return null;
   const lagMs=AREA_LAG_MS;
   function mkLagTime(h,m){ const t=new Date(t0); t.setMinutes(h*60+m+lagMs/60000); return t; }
@@ -2331,6 +2338,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   if(jmaResult.status==='fulfilled'&&jmaResult.value){ renderAll(); renderBeginnerCard(); _updateTideSourceLabel(); }
   renderWStrip(); renderFcDays(); renderAll();
   enhanceMobileUI(); setupBetaToggle();
+  let _rzT; window.addEventListener('resize',()=>{ clearTimeout(_rzT); _rzT=setTimeout(()=>{ try{drawCurve(selectedDay||new Date());}catch(_e){} if(leafletMap){ try{leafletMap.invalidateSize();}catch(_e){} } },200); });
   setInterval(()=>{renderAll();renderMapMarkers();},5*60*1000);
 });
 </script>
