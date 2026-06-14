@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0a1628">
+<meta name="theme-color" content="#1f6fb0">
 <meta name="description" content="長崎県主要エリアの潮汐・天気・まずめをまとめて確認できる釣行計画支援ツール">
 <title>長崎 釣れどきナビ β版｜潮汐・天気・釣行計画</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -14,269 +14,269 @@ html { font-size: 16px; }
 /* スマホは全体を比例拡大して可読性を上げる（rem基準テキストがまとめて大きくなる） */
 @media(max-width:600px){ html{ font-size:18px; } }
 @media(max-width:360px){ html{ font-size:17px; } }
-body { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif; background:#0a1628; color:#e8f4fd; min-height:100vh; padding-bottom:env(safe-area-inset-bottom); -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%; }
+body { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif; background:#eef3f8; color:#14283b; min-height:100vh; padding-bottom:env(safe-area-inset-bottom); -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%; }
 
-header { background:linear-gradient(135deg,#0d2137,#0a3d62); padding:14px 18px 8px; border-bottom:1px solid #1a4a6e; }
+header { background:linear-gradient(135deg,#ffffff,#2c93cf); padding:14px 18px 8px; border-bottom:1px solid #cdddea; }
 .hdr-top { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
 .hdr-top h1 { font-size:1.15rem; font-weight:700; }
-.hdr-top .sub { font-size:0.72rem; color:#7eb8d4; margin-top:2px; }
+.hdr-top .sub { font-size:0.72rem; color:#4a7188; margin-top:2px; }
 .fish-icon { font-size:1.7rem; }
-.beta-notice { background:#071525; border-left:3px solid #f39c12; padding:8px 12px; border-radius:6px; font-size:0.7rem; color:#aed6f1; line-height:1.4; }
-.beta-notice b { color:#f39c12; }
+.beta-notice { background:#f1f6fb; border-left:3px solid #d9820a; padding:8px 12px; border-radius:6px; font-size:0.7rem; color:#3f6378; line-height:1.4; }
+.beta-notice b { color:#d9820a; }
 
 /* 天気カード内スクロール */
 .wstrip-scroll { overflow-x:auto; scrollbar-width:thin; margin:0 -14px; padding:0 14px; }
 .wstrip-inner { display:flex; min-width:max-content; gap:0; }
-.wh { display:flex; flex-direction:column; align-items:center; padding:7px 9px; min-width:52px; border-right:1px solid #0f2a3d; font-size:0.63rem; }
-.wh.now { background:#0f2a3d; border-radius:6px; }
-.wh .wt { color:#7eb8d4; }
+.wh { display:flex; flex-direction:column; align-items:center; padding:7px 9px; min-width:52px; border-right:1px solid #e6edf4; font-size:0.63rem; }
+.wh.now { background:#e6edf4; border-radius:6px; }
+.wh .wt { color:#4a7188; }
 .wh .wi { font-size:1.1rem; margin:2px 0; }
-.wh .wc { color:#fff; font-weight:600; }
-.wh .ww { color:#aed6f1; }
-.wh .wr { color:#7dccff; }
+.wh .wc { color:#14283b; font-weight:600; }
+.wh .ww { color:#3f6378; }
+.wh .wr { color:#1670b5; }
 
 /* 魚種セレクター */
-.fish-selector-title { font-size:.82rem; color:#aed6f1; margin-bottom:10px; }
+.fish-selector-title { font-size:.82rem; color:#3f6378; margin-bottom:10px; }
 .fish-btns { display:flex; gap:8px; flex-wrap:wrap; }
 .fish-btn {
   display:flex; flex-direction:column; align-items:center; gap:3px;
-  padding:10px 14px; border-radius:12px; border:2px solid #1a4a6e;
-  background:#071525; color:#aed6f1; font-size:.78rem; cursor:pointer;
+  padding:10px 14px; border-radius:12px; border:2px solid #cdddea;
+  background:#f1f6fb; color:#3f6378; font-size:.78rem; cursor:pointer;
   transition:.15s; min-width:62px;
 }
 .fish-btn .fb-icon { font-size:1.5rem; line-height:1; }
 .fish-btn .fb-label { font-size:.7rem; font-weight:700; }
-.fish-btn:hover { border-color:#2980b9; background:#0d2137; }
-.fish-btn.active { background:#0d3a5a; border-color:#2ecc71; color:#7dffb3; }
-.fish-btn.active .fb-label { color:#7dffb3; }
-.fish-selected-msg { margin-top:10px; font-size:.75rem; color:#7dffb3; background:#071525; border-radius:8px; padding:7px 11px; border-left:3px solid #2ecc71; display:none; line-height:1.4; }
+.fish-btn:hover { border-color:#2176b8; background:#ffffff; }
+.fish-btn.active { background:#d6ecfb; border-color:#1f9d57; color:#1c8a4d; }
+.fish-btn.active .fb-label { color:#1c8a4d; }
+.fish-selected-msg { margin-top:10px; font-size:.75rem; color:#1c8a4d; background:#f1f6fb; border-radius:8px; padding:7px 11px; border-left:3px solid #1f9d57; display:none; line-height:1.4; }
 .fish-selected-msg.show { display:block; }
 
 .grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; padding:14px; max-width:960px; margin:0 auto; }
 @media(max-width:600px){.grid{grid-template-columns:1fr;}}
-.card { background:#0d2137; border:1px solid #1a4a6e; border-radius:14px; padding:14px; }
+.card { background:#ffffff; border:1px solid #cdddea; border-radius:14px; padding:14px; }
 .full { grid-column:1/-1; }
-.card-title { font-size:0.75rem; color:#7eb8d4; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; font-weight:700;}
+.card-title { font-size:0.75rem; color:#4a7188; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; font-weight:700;}
 
 /* Score */
 .score-card { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
 .snum { font-size:1.9rem; font-weight:800; line-height:1; }
-.slabel { font-size:.58rem; color:#7eb8d4; }
+.slabel { font-size:.58rem; color:#4a7188; }
 .sdetails { flex:1; min-width:170px; }
 .stitle { font-size:.95rem; font-weight:700; margin-bottom:5px; }
-.scomment { font-size:.8rem; color:#aed6f1; line-height:1.5; background:#071525; border-radius:9px; padding:7px 11px; border-left:3px solid #2980b9; }
+.scomment { font-size:.8rem; color:#3f6378; line-height:1.5; background:#f1f6fb; border-radius:9px; padding:7px 11px; border-left:3px solid #2176b8; }
 .badges { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
 .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:18px; font-size:.75rem; font-weight:700; }
-.b-up{background:#1a6e3c;color:#7dffb3;} .b-dn{background:#6e3a1a;color:#ffb07d;} .b-slack{background:#3a3a1a;color:#ffd97d;}
-.b-spring{background:#6e1a1a;color:#ffcccc;} .b-mid{background:#4a3a1a;color:#ffcc7d;} .b-neap{background:#1a3a6e;color:#7dccff;} .b-longcho{background:#2a2a2a;color:#aaa;}
-.b-weather{background:#0d2845;color:#aed6f1;border:1px solid #1a4a6e;} .b-wind-bad{background:#3d1a1a;color:#ff9d9d;border-color:#6e2a2a;}
+.b-up{background:#d4f1e0;color:#1c8a4d;} .b-dn{background:#f7e2cf;color:#b3590f;} .b-slack{background:#efeac9;color:#8a6712;}
+.b-spring{background:#f7d6d6;color:#b23636;} .b-mid{background:#f3e7c9;color:#996b16;} .b-neap{background:#dbe9f8;color:#1670b5;} .b-longcho{background:#e6e9ec;color:#7a848c;}
+.b-weather{background:#e7f0fb;color:#3f6378;border:1px solid #cdddea;} .b-wind-bad{background:#fbdede;color:#c23b2b;border-color:#e6b3b3;}
 
 /* 出発アドバイス */
 .depart-list { display:flex; flex-direction:column; gap:5px; }
-.da-item { background:#071525; border-radius:10px; overflow:hidden; border:1px solid #1a4a6e; transition:border-color .15s; }
-.da-item.great { border-color:#2ecc71; }
-.da-item.so-so  { border-color:#f39c12; }
+.da-item { background:#f1f6fb; border-radius:10px; overflow:hidden; border:1px solid #cdddea; transition:border-color .15s; }
+.da-item.great { border-color:#1f9d57; }
+.da-item.so-so  { border-color:#d9820a; }
 .da-row { display:flex; align-items:center; gap:8px; padding:10px 13px; cursor:pointer; user-select:none; }
-.da-row:hover { background:#0f2a3d; }
+.da-row:hover { background:#e6edf4; }
 .da-rank { font-size:.8rem; flex-shrink:0; min-width:22px; }
-.da-name { font-size:.9rem; font-weight:700; color:#fff; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.da-name { font-size:.9rem; font-weight:700; color:#14283b; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .da-score-badge { font-size:.8rem; font-weight:800; padding:3px 9px; border-radius:10px; flex-shrink:0; }
-.da-score-badge.great { background:#1a4a2e; color:#7dffb3; }
-.da-score-badge.so-so  { background:#4a3a1a; color:#ffcc7d; }
-.da-score-badge.norm  { background:#1a3a55; color:#7dccff; }
-.da-depart-txt { font-size:.75rem; color:#aed6f1; flex-shrink:0; text-align:right; max-width:90px; line-height:1.3; }
-.da-chevron { font-size:.65rem; color:#3a6a8a; flex-shrink:0; transition:transform .2s; }
+.da-score-badge.great { background:#d4f1e0; color:#1c8a4d; }
+.da-score-badge.so-so  { background:#f3e7c9; color:#996b16; }
+.da-score-badge.norm  { background:#d7e3ee; color:#1670b5; }
+.da-depart-txt { font-size:.75rem; color:#3f6378; flex-shrink:0; text-align:right; max-width:90px; line-height:1.3; }
+.da-chevron { font-size:.65rem; color:#5d7c90; flex-shrink:0; transition:transform .2s; }
 .da-item.open .da-chevron { transform:rotate(180deg); }
-.da-detail { display:none; padding:10px 13px 13px; border-top:1px solid #0f2a3d; }
+.da-detail { display:none; padding:10px 13px 13px; border-top:1px solid #e6edf4; }
 .da-item.open .da-detail { display:block; }
-.da-drive { font-size:.75rem; color:#7eb8d4; margin-bottom:6px; }
-.da-advice-main { font-size:.82rem; color:#7dffb3; font-weight:600; line-height:1.4; margin-bottom:3px; }
-.da-advice-sub { font-size:.73rem; color:#aed6f1; line-height:1.4; }
-.da-compare { font-size:.7rem; color:#aed6f1; margin-top:4px; }
-.da-fish { font-size:.68rem; color:#f39c12; margin-top:6px; }
+.da-drive { font-size:.75rem; color:#4a7188; margin-bottom:6px; }
+.da-advice-main { font-size:.82rem; color:#1c8a4d; font-weight:600; line-height:1.4; margin-bottom:3px; }
+.da-advice-sub { font-size:.73rem; color:#3f6378; line-height:1.4; }
+.da-compare { font-size:.7rem; color:#3f6378; margin-top:4px; }
+.da-fish { font-size:.68rem; color:#d9820a; margin-top:6px; }
 
 /* 明日ベスト */
-.tomorrow-item { background:#071525; border-radius:9px; padding:9px 11px; margin-bottom:7px; border-left:3px solid #2ecc71; }
+.tomorrow-item { background:#f1f6fb; border-radius:9px; padding:9px 11px; margin-bottom:7px; border-left:3px solid #1f9d57; }
 .ti-time { font-size:.92rem; font-weight:700; }
-.ti-score { float:right; font-size:.78rem; background:#1a4a2e; color:#7dffb3; padding:2px 7px; border-radius:9px; }
-.ti-reason { font-size:.72rem; color:#aed6f1; margin-top:3px; }
+.ti-score { float:right; font-size:.78rem; background:#d4f1e0; color:#1c8a4d; padding:2px 7px; border-radius:9px; }
+.ti-reason { font-size:.72rem; color:#3f6378; margin-top:3px; }
 
 /* 土日プランナー */
 .weekend-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.weekend-day { background:#071525; border-radius:9px; padding:9px 10px; border:1px solid #0f2a3d; }
-.weekend-day.sat { border-top:3px solid #2980b9; }
-.weekend-day.sun { border-top:3px solid #e74c3c; }
-.wd-label { font-size:.68rem; color:#7eb8d4; margin-bottom:4px; }
-.wd-date { font-size:.82rem; font-weight:700; color:#fff; }
+.weekend-day { background:#f1f6fb; border-radius:9px; padding:9px 10px; border:1px solid #e6edf4; }
+.weekend-day.sat { border-top:3px solid #2176b8; }
+.weekend-day.sun { border-top:3px solid #d63b2b; }
+.wd-label { font-size:.68rem; color:#4a7188; margin-bottom:4px; }
+.wd-date { font-size:.82rem; font-weight:700; color:#14283b; }
 .wd-ttype { font-size:.65rem; padding:1px 6px; border-radius:8px; display:inline-block; margin:3px 0; }
-.wd-best { font-size:.8rem; color:#7dffb3; font-weight:600; }
-.wd-score { font-size:.72rem; color:#f39c12; }
-.wd-reason { font-size:.68rem; color:#aed6f1; margin-top:2px; line-height:1.35; }
+.wd-best { font-size:.8rem; color:#1c8a4d; font-weight:600; }
+.wd-score { font-size:.72rem; color:#d9820a; }
+.wd-reason { font-size:.68rem; color:#3f6378; margin-top:2px; line-height:1.35; }
 .weekend-section { margin-bottom:10px; }
-.weekend-header { font-size:.75rem; color:#7eb8d4; margin-bottom:5px; font-weight:600; }
+.weekend-header { font-size:.75rem; color:#4a7188; margin-bottom:5px; font-weight:600; }
 
 /* 干満表 */
-.tide-row { display:flex; align-items:center; justify-content:space-between; padding:5px 0; border-bottom:1px solid #0f2a3d; font-size:.8rem; }
-.tide-row:last-child{border-bottom:none;} .tide-row .tm{color:#fff;font-weight:600;} .tide-row .tp{color:#7eb8d4;} .tide-row .th{color:#7dccff;font-weight:700;}
-.tide-row.next{background:#0f2a3d;margin:0 -8px;padding:5px 8px;border-radius:6px;} .tide-row.next .tm{color:#7dffb3;}
+.tide-row { display:flex; align-items:center; justify-content:space-between; padding:5px 0; border-bottom:1px solid #e6edf4; font-size:.8rem; }
+.tide-row:last-child{border-bottom:none;} .tide-row .tm{color:#14283b;font-weight:600;} .tide-row .tp{color:#4a7188;} .tide-row .th{color:#1670b5;font-weight:700;}
+.tide-row.next{background:#e6edf4;margin:0 -8px;padding:5px 8px;border-radius:6px;} .tide-row.next .tm{color:#1c8a4d;}
 
 /* おすすめ時間帯 */
-.win-item { background:#071525; border-radius:9px; padding:9px 11px; margin-bottom:7px; border-left:4px solid #2ecc71; }
-.win-item.ok{border-left-color:#f39c12;} .win-time{font-size:.88rem;font-weight:700;} .win-reason{font-size:.72rem;color:#aed6f1;margin-top:3px;}
-.win-score{float:right;font-size:.77rem;font-weight:700;padding:2px 7px;border-radius:9px;background:#1a4a2e;color:#7dffb3;}
-.win-score.ok{background:#4a3a1a;color:#ffcc7d;}
+.win-item { background:#f1f6fb; border-radius:9px; padding:9px 11px; margin-bottom:7px; border-left:4px solid #1f9d57; }
+.win-item.ok{border-left-color:#d9820a;} .win-time{font-size:.88rem;font-weight:700;} .win-reason{font-size:.72rem;color:#3f6378;margin-top:3px;}
+.win-score{float:right;font-size:.77rem;font-weight:700;padding:2px 7px;border-radius:9px;background:#d4f1e0;color:#1c8a4d;}
+.win-score.ok{background:#f3e7c9;color:#996b16;}
 
 /* スコア内訳 */
 .bd-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
-.bd-label{font-size:.76rem;color:#aed6f1;} .bd-bar-w{width:75px;height:5px;background:#1a3a55;border-radius:3px;overflow:hidden;}
-.bd-bar{height:100%;border-radius:3px;background:#2980b9;transition:width 1s;}
-.bd-pts{font-size:.76rem;font-weight:700;color:#7dccff;min-width:38px;text-align:right;}
+.bd-label{font-size:.76rem;color:#3f6378;} .bd-bar-w{width:75px;height:5px;background:#d7e3ee;border-radius:3px;overflow:hidden;}
+.bd-bar{height:100%;border-radius:3px;background:#2176b8;transition:width 1s;}
+.bd-pts{font-size:.76rem;font-weight:700;color:#1670b5;min-width:38px;text-align:right;}
 
 /* 天気3日 */
-.fc-day{flex:1;min-width:90px;background:#071525;border-radius:11px;padding:10px 8px;text-align:center;border:1px solid #0f2a3d;}
-.fc-day.today{border-color:#2980b9;} .fd-date{font-size:.68rem;color:#7eb8d4;margin-bottom:3px;} .fd-icon{font-size:1.7rem;margin:3px 0;}
-.fd-desc{font-size:.65rem;color:#aed6f1;margin-bottom:5px;} .fd-temps{font-size:.8rem;font-weight:700;} .fd-max{color:#ff9d7d;} .fd-min{color:#7dccff;}
-.fd-wind{font-size:.68rem;color:#aed6f1;margin-top:3px;} .fd-rain{font-size:.68rem;color:#7dccff;margin-top:2px;}
+.fc-day{flex:1;min-width:90px;background:#f1f6fb;border-radius:11px;padding:10px 8px;text-align:center;border:1px solid #e6edf4;}
+.fc-day.today{border-color:#2176b8;} .fd-date{font-size:.68rem;color:#4a7188;margin-bottom:3px;} .fd-icon{font-size:1.7rem;margin:3px 0;}
+.fd-desc{font-size:.65rem;color:#3f6378;margin-bottom:5px;} .fd-temps{font-size:.8rem;font-weight:700;} .fd-max{color:#bf5125;} .fd-min{color:#1670b5;}
+.fd-wind{font-size:.68rem;color:#3f6378;margin-top:3px;} .fd-rain{font-size:.68rem;color:#1670b5;margin-top:2px;}
 .fd-fish{margin-top:6px;font-size:.68rem;padding:2px 7px;border-radius:7px;display:inline-block;}
-.fish-good{background:#1a4a2e;color:#7dffb3;} .fish-ok{background:#4a3a1a;color:#ffcc7d;} .fish-bad{background:#3d1a1a;color:#ff9d9d;}
+.fish-good{background:#d4f1e0;color:#1c8a4d;} .fish-ok{background:#f3e7c9;color:#996b16;} .fish-bad{background:#fbdede;color:#c23b2b;}
 
 /* 出発地点入力 */
 .loc-input-row { display:flex; gap:6px; margin-bottom:10px; }
-.loc-input { flex:1; background:#071525; border:1px solid #1a4a6e; border-radius:10px; padding:8px 12px; color:#e8f4fd; font-size:.82rem; outline:none; }
-.loc-input:focus { border-color:#2980b9; }
+.loc-input { flex:1; background:#f1f6fb; border:1px solid #cdddea; border-radius:10px; padding:8px 12px; color:#14283b; font-size:.82rem; outline:none; }
+.loc-input:focus { border-color:#2176b8; }
 .loc-btn { padding:7px 12px; border-radius:10px; border:none; cursor:pointer; font-size:.78rem; font-weight:700; white-space:nowrap; transition:.15s; }
-.loc-btn-search { background:#2980b9; color:#fff; }
-.loc-btn-gps { background:#1a6e3c; color:#7dffb3; }
-.loc-result { font-size:.73rem; color:#7eb8d4; margin-bottom:8px; min-height:1.2em; }
+.loc-btn-search { background:#2176b8; color:#14283b; }
+.loc-btn-gps { background:#d4f1e0; color:#1c8a4d; }
+.loc-result { font-size:.73rem; color:#4a7188; margin-bottom:8px; min-height:1.2em; }
 
 /* Map */
-.map-card{padding:0;overflow:hidden;} .map-hdr{padding:11px 14px;border-bottom:1px solid #1a4a6e;}
+.map-card{padding:0;overflow:hidden;} .map-hdr{padding:11px 14px;border-bottom:1px solid #cdddea;}
 .map-body{display:flex;height:420px;}
 #map{flex:1;min-width:0;height:100%;}
-.spot-panel{width:270px;background:#071525;border-left:1px solid #1a4a6e;overflow-y:auto;display:flex;flex-direction:column;}
-.spot-panel-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#3a6a8a;font-size:.78rem;line-height:1.6;}
+.spot-panel{width:270px;background:#f1f6fb;border-left:1px solid #cdddea;overflow-y:auto;display:flex;flex-direction:column;}
+.spot-panel-empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#5d7c90;font-size:.78rem;line-height:1.6;}
 .sp-content{padding:12px;flex:1;}
-.sp-name{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:2px;}
-.sp-area{font-size:.68rem;color:#7eb8d4;margin-bottom:8px;}
+.sp-name{font-size:.95rem;font-weight:700;color:#14283b;margin-bottom:2px;}
+.sp-area{font-size:.68rem;color:#4a7188;margin-bottom:8px;}
 .sp-fish{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
-.sp-fish span{background:#1a4a2e;color:#7dffb3;border-radius:8px;padding:2px 7px;font-size:.68rem;}
+.sp-fish span{background:#d4f1e0;color:#1c8a4d;border-radius:8px;padding:2px 7px;font-size:.68rem;}
 .sp-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;}
-.sp-tags span{background:#0f2a3d;color:#aed6f1;border-radius:8px;padding:2px 7px;font-size:.65rem;}
-.sp-tide-txt{font-size:.76rem;color:#aed6f1;line-height:1.45;background:#0a1e30;border-radius:8px;padding:7px 9px;margin-bottom:8px;border-left:3px solid #2980b9;}
-.sp-drive-row{font-size:.75rem;color:#7eb8d4;margin-bottom:5px;}
-.sp-advice-box{background:#071525;border:1px solid #1a6e3c;border-radius:9px;padding:8px 10px;margin-bottom:8px;}
-.sp-advice-main{font-size:.82rem;font-weight:700;color:#7dffb3;line-height:1.4;}
-.sp-advice-sub{font-size:.72rem;color:#aed6f1;margin-top:3px;line-height:1.4;}
-.sp-advice-box.warn{border-color:#6e3a1a;}
-.sp-advice-box.warn .sp-advice-main{color:#ffb07d;}
-.sp-gmaps-btn{display:block;text-align:center;background:#1a73e8;color:#fff;border-radius:9px;padding:8px;font-size:.78rem;font-weight:700;text-decoration:none;margin-top:4px;}
+.sp-tags span{background:#e6edf4;color:#3f6378;border-radius:8px;padding:2px 7px;font-size:.65rem;}
+.sp-tide-txt{font-size:.76rem;color:#3f6378;line-height:1.45;background:#eef4fa;border-radius:8px;padding:7px 9px;margin-bottom:8px;border-left:3px solid #2176b8;}
+.sp-drive-row{font-size:.75rem;color:#4a7188;margin-bottom:5px;}
+.sp-advice-box{background:#f1f6fb;border:1px solid #d4f1e0;border-radius:9px;padding:8px 10px;margin-bottom:8px;}
+.sp-advice-main{font-size:.82rem;font-weight:700;color:#1c8a4d;line-height:1.4;}
+.sp-advice-sub{font-size:.72rem;color:#3f6378;margin-top:3px;line-height:1.4;}
+.sp-advice-box.warn{border-color:#f7e2cf;}
+.sp-advice-box.warn .sp-advice-main{color:#b3590f;}
+.sp-gmaps-btn{display:block;text-align:center;background:#1a73e8;color:#14283b;border-radius:9px;padding:8px;font-size:.78rem;font-weight:700;text-decoration:none;margin-top:4px;}
 .sp-addr{display:flex;align-items:center;gap:6px;margin:4px 0 6px;flex-wrap:wrap;}
-.sp-addr-txt{font-size:.72rem;color:#7dccff;flex:1;user-select:text;-webkit-user-select:text;}
-.sp-copy-btn{background:#0e3050;border:1px solid #2a6a9a;color:#7dccff;border-radius:6px;padding:3px 8px;font-size:.68rem;cursor:pointer;white-space:nowrap;}
-.sp-copy-btn:active{background:#1a73e8;color:#fff;}
+.sp-addr-txt{font-size:.72rem;color:#1670b5;flex:1;user-select:text;-webkit-user-select:text;}
+.sp-copy-btn{background:#e3eefb;border:1px solid #9bbdd6;color:#1670b5;border-radius:6px;padding:3px 8px;font-size:.68rem;cursor:pointer;white-space:nowrap;}
+.sp-copy-btn:active{background:#1a73e8;color:#14283b;}
 @media(max-width:700px){
   .map-body{flex-direction:column;height:auto;}
   #map{height:300px;}
-  .spot-panel{width:100%;height:260px;border-left:none;border-top:1px solid #1a4a6e;}
+  .spot-panel{width:100%;height:260px;border-left:none;border-top:1px solid #cdddea;}
 }
 
 /* 初心者向けカード */
 .now-status-big { display:flex; align-items:center; gap:16px; margin-bottom:14px; flex-wrap:wrap; }
 .now-emoji { font-size:3.2rem; line-height:1; flex-shrink:0; }
 .now-title { font-size:1.1rem; font-weight:800; margin-bottom:4px; }
-.now-desc { font-size:.85rem; color:#aed6f1; line-height:1.6; }
+.now-desc { font-size:.85rem; color:#3f6378; line-height:1.6; }
 
 .hour-bar { display:flex; gap:2px; margin-bottom:6px; }
 .hour-block { flex:1; height:28px; border-radius:3px; position:relative; cursor:default; transition:.1s; }
-.hour-block .hb-label { position:absolute; bottom:-16px; left:50%; transform:translateX(-50%); font-size:.55rem; color:#3a6a8a; white-space:nowrap; }
-.hour-block.now-block { outline:2px solid #2ecc71; outline-offset:1px; border-radius:4px; }
+.hour-block .hb-label { position:absolute; bottom:-16px; left:50%; transform:translateX(-50%); font-size:.55rem; color:#5d7c90; white-space:nowrap; }
+.hour-block.now-block { outline:2px solid #1f9d57; outline-offset:1px; border-radius:4px; }
 .hbar-wrap { padding-bottom:20px; margin-bottom:4px; }
 .hbar-legend { display:flex; gap:12px; margin-top:4px; }
-.hbar-leg { display:flex; align-items:center; gap:4px; font-size:.68rem; color:#7eb8d4; }
+.hbar-leg { display:flex; align-items:center; gap:4px; font-size:.68rem; color:#4a7188; }
 .hbar-dot { width:10px; height:10px; border-radius:2px; }
 
 .best-times { display:flex; flex-direction:column; gap:8px; }
-.bt-item { background:#071525; border-radius:12px; padding:12px 14px; display:flex; align-items:flex-start; gap:12px; }
-.bt-item.rank1 { border:1px solid #2ecc71; }
-.bt-item.rank2 { border:1px solid #1a4a6e; }
-.bt-item.rank3 { border:1px solid #1a3a55; }
+.bt-item { background:#f1f6fb; border-radius:12px; padding:12px 14px; display:flex; align-items:flex-start; gap:12px; }
+.bt-item.rank1 { border:1px solid #1f9d57; }
+.bt-item.rank2 { border:1px solid #cdddea; }
+.bt-item.rank3 { border:1px solid #d7e3ee; }
 .bt-rank { font-size:1.4rem; flex-shrink:0; line-height:1; }
-.bt-time { font-size:1rem; font-weight:800; color:#fff; margin-bottom:3px; }
-.bt-reason { font-size:.8rem; color:#aed6f1; line-height:1.5; }
-.bt-reason b { color:#7dffb3; }
+.bt-time { font-size:1rem; font-weight:800; color:#14283b; margin-bottom:3px; }
+.bt-reason { font-size:.8rem; color:#3f6378; line-height:1.5; }
+.bt-reason b { color:#1c8a4d; }
 
 /* 日付ナビ */
 .date-nav { display:flex; align-items:center; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
-.date-nav-arrow { background:#071525; border:1px solid #1a4a6e; color:#aed6f1; border-radius:8px; padding:5px 12px; font-size:1rem; cursor:pointer; }
-.date-nav-label { font-size:.9rem; font-weight:700; color:#fff; flex:1; text-align:center; min-width:130px; }
+.date-nav-arrow { background:#f1f6fb; border:1px solid #cdddea; color:#3f6378; border-radius:8px; padding:5px 12px; font-size:1rem; cursor:pointer; }
+.date-nav-label { font-size:.9rem; font-weight:700; color:#14283b; flex:1; text-align:center; min-width:130px; }
 .date-chips { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
-.date-chip { padding:4px 10px; border-radius:12px; border:1px solid #1a4a6e; background:#071525; color:#aed6f1; font-size:.72rem; cursor:pointer; }
-.date-chip.active { background:#2980b9; border-color:#2980b9; color:#fff; font-weight:700; }
+.date-chip { padding:4px 10px; border-radius:12px; border:1px solid #cdddea; background:#f1f6fb; color:#3f6378; font-size:.72rem; cursor:pointer; }
+.date-chip.active { background:#2176b8; border-color:#2176b8; color:#14283b; font-weight:700; }
 /* カレンダーピッカーボタン */
-.date-cal-btn { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:12px; border:1px solid #1a4a6e; background:#071525; color:#7eb8d4; font-size:.72rem; cursor:pointer; transition:.15s; }
-.date-cal-btn:hover { border-color:#2980b9; color:#aed6f1; }
-.date-cal-btn.has-custom { border-color:#9b59b6; color:#cf9ef7; background:#1a0a2e; }
+.date-cal-btn { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:12px; border:1px solid #cdddea; background:#f1f6fb; color:#4a7188; font-size:.72rem; cursor:pointer; transition:.15s; }
+.date-cal-btn:hover { border-color:#2176b8; color:#3f6378; }
+.date-cal-btn.has-custom { border-color:#7e3f9c; color:#7e3f9c; background:#f3eafc; }
 #date-picker-input { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
 /* カレンダーポップオーバー */
-.date-popover { position:absolute; z-index:1000; background:#0d2137; border:1px solid #1a4a6e; border-radius:14px; padding:16px; box-shadow:0 8px 32px rgba(0,0,0,.6); min-width:280px; display:none; }
+.date-popover { position:absolute; z-index:1000; background:#ffffff; border:1px solid #cdddea; border-radius:14px; padding:16px; box-shadow:0 8px 32px rgba(0,0,0,.6); min-width:280px; display:none; }
 .date-popover.open { display:block; }
 .dp-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.dp-month-label { font-size:.9rem; font-weight:700; color:#fff; }
-.dp-arrow { background:none; border:1px solid #1a4a6e; color:#aed6f1; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:.85rem; }
-.dp-arrow:hover { border-color:#2980b9; }
-.dp-weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.65rem; color:#3a6a8a; margin-bottom:4px; font-weight:700; }
+.dp-month-label { font-size:.9rem; font-weight:700; color:#14283b; }
+.dp-arrow { background:none; border:1px solid #cdddea; color:#3f6378; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:.85rem; }
+.dp-arrow:hover { border-color:#2176b8; }
+.dp-weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.65rem; color:#5d7c90; margin-bottom:4px; font-weight:700; }
 .dp-days { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
-.dp-day { border:none; border-radius:8px; padding:6px 2px; font-size:.78rem; cursor:pointer; background:none; color:#aed6f1; transition:.1s; text-align:center; line-height:1.2; }
-.dp-day:hover:not(:disabled) { background:#1a3a5a; }
-.dp-day.today { color:#7dffb3; font-weight:700; }
-.dp-day.selected { background:#2980b9; color:#fff; font-weight:700; }
-.dp-day.past { color:#2a4a5a; cursor:default; }
-.dp-day.out { color:#1a3a4a; cursor:default; }
+.dp-day { border:none; border-radius:8px; padding:6px 2px; font-size:.78rem; cursor:pointer; background:none; color:#3f6378; transition:.1s; text-align:center; line-height:1.2; }
+.dp-day:hover:not(:disabled) { background:#dbe7f1; }
+.dp-day.today { color:#1c8a4d; font-weight:700; }
+.dp-day.selected { background:#2176b8; color:#14283b; font-weight:700; }
+.dp-day.past { color:#aebccb; cursor:default; }
+.dp-day.out { color:#c6d2dc; cursor:default; }
 .dp-day:disabled { cursor:default; }
-.dp-day .dp-score { font-size:.55rem; color:#5a8aaa; }
-.dp-day.today .dp-score { color:#2ecc71; }
+.dp-day .dp-score { font-size:.55rem; color:#6d8597; }
+.dp-day.today .dp-score { color:#1f9d57; }
 .dp-close-row { text-align:center; margin-top:10px; }
-.dp-close { font-size:.72rem; color:#3a6a8a; cursor:pointer; padding:4px 16px; border-radius:8px; border:1px solid #1a4a6e; background:none; }
-.dp-close:hover { border-color:#e74c3c; color:#e74c3c; }
+.dp-close { font-size:.72rem; color:#5d7c90; cursor:pointer; padding:4px 16px; border-radius:8px; border:1px solid #cdddea; background:none; }
+.dp-close:hover { border-color:#d63b2b; color:#d63b2b; }
 .dp-wrap { position:relative; display:inline-block; }
 
 /* Curve */
 #tide-canvas{width:100%;height:210px;display:block;}
 .win-item{cursor:pointer;transition:border-left-color .15s,background .15s;}
-.win-item:hover{background:#0d2137;}
-.win-item.selected{border-left-color:#fff;background:#0f2a3d;box-shadow:0 0 0 1px rgba(255,255,255,.15);}
+.win-item:hover{background:#ffffff;}
+.win-item.selected{border-left-color:#14283b;background:#e6edf4;box-shadow:0 0 0 1px rgba(255,255,255,.15);}
 .tide-legend{display:flex;gap:0;margin-bottom:6px;border-radius:6px;overflow:hidden;font-size:.73rem;font-weight:700;}
-.tide-legend-tide{flex:1;background:#1a4a7a;color:#7dccff;text-align:center;padding:4px 0;}
-.tide-legend-bi{flex:1;background:#7a5800;color:#f1c40f;text-align:center;padding:4px 0;}
+.tide-legend-tide{flex:1;background:#dbeaf6;color:#1670b5;text-align:center;padding:4px 0;}
+.tide-legend-bi{flex:1;background:#f3e3a8;color:#b8890a;text-align:center;padding:4px 0;}
 
 .section-hdr { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
 .section-hdr .card-title { margin:0; }
 .date-nav { margin:0; }
 
-.score-compact { display:flex; gap:16px; align-items:flex-start; padding:0 0 14px; border-bottom:1px solid #1a4a6e; margin-bottom:14px; }
+.score-compact { display:flex; gap:16px; align-items:flex-start; padding:0 0 14px; border-bottom:1px solid #cdddea; margin-bottom:14px; }
 .score-compact-num { flex-shrink:0; text-align:center; min-width:76px; }
 .score-compact-num .snum { font-size:3rem; font-weight:900; line-height:1; display:block; }
-.score-bar { width:100%; height:6px; background:#1a3a55; border-radius:3px; margin-top:7px; overflow:hidden; }
+.score-bar { width:100%; height:6px; background:#d7e3ee; border-radius:3px; margin-top:7px; overflow:hidden; }
 .score-bar-fill { height:100%; border-radius:3px; width:0%; transition:width 1.2s; }
 .score-compact-info { flex:1; min-width:0; }
 
-.detail-toggle-btn { width:100%; background:none; border:none; color:#7eb8d4; font-size:.82rem; cursor:pointer; text-align:left; padding:0; font-family:inherit; display:flex; justify-content:space-between; align-items:center; line-height:1.4; }
-.detail-arrow { font-size:.72rem; color:#3a6a8a; background:#071525; padding:3px 8px; border-radius:8px; border:1px solid #1a4a6e; }
+.detail-toggle-btn { width:100%; background:none; border:none; color:#4a7188; font-size:.82rem; cursor:pointer; text-align:left; padding:0; font-family:inherit; display:flex; justify-content:space-between; align-items:center; line-height:1.4; }
+.detail-arrow { font-size:.72rem; color:#5d7c90; background:#f1f6fb; padding:3px 8px; border-radius:8px; border:1px solid #cdddea; }
 
 
 .data-health { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-.health-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid #1a4a6e; background:#071525; color:#7eb8d4; border-radius:999px; padding:4px 9px; font-size:.66rem; line-height:1.2; }
-.health-pill.ok { border-color:#1a6e3c; color:#7dffb3; }
-.health-pill.warn { border-color:#6e3a1a; color:#ffcc7d; }
-.health-pill.bad { border-color:#6e2a2a; color:#ff9d9d; }
-.source-note { font-size:.64rem; color:#5f8da5; line-height:1.55; margin-top:7px; }
-.data-limit-note { display:none; margin-top:8px; padding:7px 10px; border-radius:8px; background:#2b2310; border-left:3px solid #f39c12; color:#ffdc91; font-size:.7rem; line-height:1.45; }
+.health-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid #cdddea; background:#f1f6fb; color:#4a7188; border-radius:999px; padding:4px 9px; font-size:.66rem; line-height:1.2; }
+.health-pill.ok { border-color:#d4f1e0; color:#1c8a4d; }
+.health-pill.warn { border-color:#f7e2cf; color:#996b16; }
+.health-pill.bad { border-color:#e6b3b3; color:#c23b2b; }
+.source-note { font-size:.64rem; color:#5f7e90; line-height:1.55; margin-top:7px; }
+.data-limit-note { display:none; margin-top:8px; padding:7px 10px; border-radius:8px; background:#fdf3da; border-left:3px solid #d9820a; color:#8a6410; font-size:.7rem; line-height:1.45; }
 .data-limit-note.show { display:block; }
 button, input { font:inherit; }
 button { -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
 button:focus-visible, input:focus-visible, a:focus-visible { outline:3px solid rgba(125,204,255,.75); outline-offset:2px; }
 .da-row { width:100%; border:0; color:inherit; background:transparent; text-align:left; font-family:inherit; }
-.map-fallback { height:100%; min-height:260px; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#7eb8d4; background:#071525; line-height:1.6; }
+.map-fallback { height:100%; min-height:260px; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#4a7188; background:#f1f6fb; line-height:1.6; }
 @media(max-width:600px){
   header{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));}
   .grid{padding:10px;gap:9px;}
@@ -303,8 +303,83 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline:3px solid r
   #detail-section>div[style*="grid-template-columns"]{grid-template-columns:1fr!important;}
 }
 @media(prefers-reduced-motion:reduce){ *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;} }
-footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));font-size:.65rem;color:#3a6a8a; line-height:1.5;}
-.loading-text{font-size:.73rem;color:#3a6a8a;font-style:italic;}
+footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));font-size:.65rem;color:#5d7c90; line-height:1.5;}
+.loading-text{font-size:.73rem;color:#5d7c90;font-style:italic;}
+
+/* ===== モバイル最適化：アコーディオン（引き出し式）＋可読性 ===== */
+html,body{ max-width:100%; overflow-x:hidden; }
+.acc{ padding:0!important; }
+.acc-head{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; background:none; border:0; color:#14283b; font-family:inherit; cursor:pointer; padding:15px 16px; text-align:left; min-height:54px; }
+.acc-head:active{ background:#e6edf4; }
+.acc-title{ font-size:.98rem; font-weight:700; line-height:1.3; }
+.acc-chev{ color:#4a7188; font-size:.95rem; flex-shrink:0; transition:transform .2s; }
+.acc.collapsed .acc-chev{ transform:rotate(-90deg); }
+.acc-body{ padding:0 14px 16px; }
+.acc.collapsed .acc-body{ display:none; }
+.acc.map-card .acc-body{ padding:0; }
+.acc .detail-toggle-btn{ display:none; }
+.acc-toolbar{ display:flex; gap:8px; margin-bottom:2px; }
+.acc-toolbar button{ flex:1; background:#ffffff; border:1px solid #cdddea; color:#3f6378; border-radius:10px; padding:10px; font-size:.8rem; font-weight:700; cursor:pointer; min-height:44px; }
+.acc-toolbar button:active{ background:#e6edf4; }
+.beta-notice{ cursor:pointer; }
+.beta-notice.clamped{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+@media(max-width:600px){
+  .grid{ padding:8px; gap:8px; }
+  .acc-title{ font-size:1.05rem; }
+  .scomment,.now-desc{ font-size:.88rem; line-height:1.6; }
+  .tide-row{ font-size:.86rem; }
+  .bd-label,.bd-pts{ font-size:.82rem; }
+  .win-time,.ti-time,.wd-best{ font-size:.95rem; }
+  .bt-reason{ font-size:.86rem; }
+  .now-title{ font-size:1.18rem; }
+}
+
+.acc-state{ display:flex; align-items:center; gap:7px; flex-shrink:0; }
+.acc-hint{ font-size:.72rem; color:#1c8a4d; background:#eef4fa; border:1px solid #bfe6cf; border-radius:999px; padding:2px 11px; white-space:nowrap; }
+.acc:not(.collapsed) .acc-hint{ color:#996b16; border-color:#e7d9a8; }
+.acc-close{ width:100%; margin-top:14px; background:#eef4fa; border:1px solid #cdddea; color:#2176b8; border-radius:10px; padding:12px; font-size:.84rem; font-weight:700; cursor:pointer; min-height:46px; }
+.acc-close:active{ background:#e6edf4; }
+.acc.map-card .acc-close{ margin:12px; width:calc(100% - 24px); }
+
+/* ===== ライトテーマ 調整 ===== */
+header{ background:linear-gradient(135deg,#1f6fb0,#33a3d6); border-bottom:1px solid #1a5a90; }
+.hdr-top h1{ color:#ffffff; }
+.hdr-top .sub{ color:#dcebf6; }
+.health-pill{ background:rgba(255,255,255,.92); }
+.card{ box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.loc-btn-search,.sp-gmaps-btn,.date-chip.active,.dp-day.selected{ color:#ffffff; }
+.sp-copy-btn:active{ color:#ffffff; }
+.win-item.selected{ border-left-color:#2176b8; }
+.acc-head,.acc-title{ color:#14283b; }
+
+/* ===== スマホ可読性の底上げ（小さすぎる文字・タップ領域）===== */
+@media(max-width:600px){
+  /* 最小級フォントを読める大きさへ */
+  .slabel{ font-size:.74rem; }
+  .hb-label{ font-size:.64rem; }
+  .dp-score{ font-size:.64rem; }
+  .dp-weekdays{ font-size:.74rem; }
+  .source-note{ font-size:.76rem; line-height:1.6; }
+  .health-pill{ font-size:.74rem; padding:5px 11px; }
+  .sp-area,.sp-fish span,.sp-tags span{ font-size:.78rem; }
+  .fd-date,.fd-desc,.fd-wind,.fd-rain,.fd-fish{ font-size:.78rem; }
+  .wd-label,.wd-reason,.wd-ttype{ font-size:.78rem; }
+  .wd-reason{ line-height:1.5; }
+  .da-fish,.da-depart-txt,.da-chevron{ font-size:.76rem; }
+  .hbar-leg{ font-size:.78rem; }
+  .wh{ font-size:.72rem; min-width:58px; }
+  .wh .wi{ font-size:1.25rem; }
+  .beta-notice{ font-size:.8rem; line-height:1.6; }
+  footer{ font-size:.74rem; line-height:1.7; }
+  .scomment,.now-desc{ line-height:1.65; }
+  .bt-reason,.da-advice-sub,.win-reason,.ti-reason{ line-height:1.55; }
+  /* タップしやすく */
+  .date-chip,.date-nav-arrow,.date-cal-btn{ min-height:44px; }
+  .dp-day{ min-height:42px; padding:7px 2px; }
+  .sp-copy-btn{ padding:8px 12px; font-size:.74rem; }
+  .da-row{ min-height:52px; }
+  .fish-btn{ min-height:60px; }
+}
 </style>
 </head>
 <body>
@@ -319,7 +394,7 @@ footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(
   </div>
   <div class="beta-notice">
     <b>【長崎県主要エリア対応 β版】</b><br>
-    長崎市・佐世保・平戸の潮汐は気象庁の潮位予測データを使用しています。茂木・戸町・樺島・小浜は長崎港を参考地点とし、大村湾は佐世保港の予測値に簡易補正を適用しています。「釣れどき指数」は独自の参考指数で、釣果を保証するものではありません。実際の潮・風・波・立入可否は現地でご確認ください。
+    長崎市・佐世保・平戸は、可能な範囲で気象庁の潮位予測データを利用し、取得できない場合は独自の推算値を表示します。茂木・戸町・小浜は近隣の気象庁地点を基に時間差・潮位差を補正した参考値、樺島は外洋のため長崎港を基準にした参考値です。大村湾は佐世保港の予測を基に、時間差（約2時間55分）と潮位差（振幅比0.28）を独自補正した参考値です。「釣れどき指数」は潮汐・朝夕まずめ・風・降水などを組み合わせた独自の参考指数（100点満点換算）であり、釣果を保証するものではありません。実際の潮・風・波・立入可否は現地でご確認ください。
   </div>
   <div class="data-health" aria-live="polite" aria-label="データ取得状況">
     <span class="health-pill" id="tide-health">🌊 潮汐：読み込み中</span>
@@ -359,18 +434,18 @@ footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(
         <button class="date-nav-arrow" onclick="shiftDay(1)">▶</button>
       </div>
     </div>
+    <div id="fc-days" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
     <div class="wstrip-scroll">
-      <div class="wstrip-inner" id="wstrip" aria-live="polite"><div style="padding:10px 4px;font-size:.73rem;color:#3a6a8a">天気データ取得中...</div></div>
+      <div class="wstrip-inner" id="wstrip" aria-live="polite"><div style="padding:10px 4px;font-size:.73rem;color:#5d7c90">天気データ取得中...</div></div>
     </div>
-    <div id="fc-days" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;"></div>
     <div class="data-limit-note" id="forecast-limit-note"></div>
-    <div style="font-size:.62rem;color:#3a6a8a;margin-top:8px;">※天気はOpen-Meteo予測値です。予報期間外は潮汐・日の出入り中心の参考指数になります。</div>
+    <div style="font-size:.62rem;color:#5d7c90;margin-top:8px;">※天気はOpen-Meteo予測値です。予報期間外は潮汐・日の出入り中心の参考指数になります。</div>
   </div>
 
   <div class="card full" id="forecast-main-card">
     <div class="card-title" id="beginner-card-title">🎣 今日の釣り予報</div>
     <div style="margin-bottom:12px;">
-      <div style="font-size:.72rem;color:#7eb8d4;margin-bottom:6px;">📍 予報エリア選択</div>
+      <div style="font-size:.72rem;color:#4a7188;margin-bottom:6px;">📍 予報エリア選択</div>
       <div id="area-selector" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
     </div>
     <div class="score-compact">
@@ -385,17 +460,18 @@ footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(
           <span class="badge b-up" id="tide-badge">-- 潮</span>
           <span class="badge b-spring" id="ttype-badge">潮回り</span>
           <span class="badge b-weather" id="wx-badge" style="display:none"></span>
-          <span style="font-size:.73rem;color:#7eb8d4;align-self:center" id="tide-ht">潮位--m</span>
+          <span style="font-size:.73rem;color:#4a7188;align-self:center" id="tide-ht">潮位--m</span>
         </div>
+        <div style="font-size:.66rem;color:#5d7c90;margin-top:7px;line-height:1.45;">※「釣れどき指数」は潮汐・まずめ・天気から算出した独自の参考指数（100点満点換算）です。釣果を保証するものではありません。</div>
       </div>
     </div>
     <div class="now-status-big" id="now-status-big"></div>
     <div class="hbar-wrap">
       <div class="hour-bar" id="hour-bar"></div>
       <div class="hbar-legend">
-        <div class="hbar-leg"><div class="hbar-dot" style="background:#2ecc71"></div>釣れやすい</div>
-        <div class="hbar-leg"><div class="hbar-dot" style="background:#f39c12"></div>まあまあ</div>
-        <div class="hbar-leg"><div class="hbar-dot" style="background:#2c4a6a"></div>釣れにくい</div>
+        <div class="hbar-leg"><div class="hbar-dot" style="background:#1f9d57"></div>釣れやすい</div>
+        <div class="hbar-leg"><div class="hbar-dot" style="background:#d9820a"></div>まあまあ</div>
+        <div class="hbar-leg"><div class="hbar-dot" style="background:#9fb1c2"></div>釣れにくい</div>
       </div>
     </div>
     <div class="best-times" id="best-times-list"></div>
@@ -408,11 +484,11 @@ footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(
     </button>
     <div id="detail-section" style="display:block;padding-top:14px;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-        <div class="card-title" style="margin:0">🌊 潮位グラフ <span id="tide-area-label" style="font-size:.65rem;color:#7eb8d4;font-weight:400;text-transform:none;">※長崎港基準</span></div>
+        <div class="card-title" style="margin:0">🌊 潮位グラフ <span id="tide-area-label" style="font-size:.65rem;color:#4a7188;font-weight:400;text-transform:none;">※長崎港基準</span></div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <button onclick="shiftDay(-1)" style="background:rgba(255,255,255,.08);border:none;color:#7dccff;font-size:1rem;padding:2px 9px;border-radius:6px;cursor:pointer;">◀</button>
-          <span id="detail-date-label" style="font-size:.82rem;color:#7dccff;font-weight:700;min-width:120px;text-align:center;"></span>
-          <button onclick="shiftDay(1)" style="background:rgba(255,255,255,.08);border:none;color:#7dccff;font-size:1rem;padding:2px 9px;border-radius:6px;cursor:pointer;">▶</button>
+          <button onclick="shiftDay(-1)" style="background:rgba(0,0,0,.10);border:none;color:#1670b5;font-size:1rem;padding:2px 9px;border-radius:6px;cursor:pointer;">◀</button>
+          <span id="detail-date-label" style="font-size:.82rem;color:#1670b5;font-weight:700;min-width:120px;text-align:center;"></span>
+          <button onclick="shiftDay(1)" style="background:rgba(0,0,0,.10);border:none;color:#1670b5;font-size:1rem;padding:2px 9px;border-radius:6px;cursor:pointer;">▶</button>
         </div>
       </div>
       <div class="tide-legend">
@@ -441,7 +517,7 @@ footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(
     <div class="map-hdr">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div class="card-title" style="margin:0">🗺️ ポイントマップ（長崎県）</div>
-        <span style="font-size:.68rem;color:#3a6a8a">← ピンをタップで詳細</span>
+        <span style="font-size:.68rem;color:#5d7c90">← ピンをタップで詳細</span>
       </div>
       <div class="fish-selector-title">🎯 ターゲットで絞り込む</div>
       <div class="fish-btns" id="fish-btns"></div>
@@ -481,7 +557,7 @@ footer{text-align:center;padding:14px max(14px,env(safe-area-inset-right)) calc(
 
 <footer>
   長崎 釣れどきナビ β版 🎣<br>
-  潮汐：気象庁潮位予測データ（加工）｜天気：Open-Meteo｜地図・住所検索：OpenStreetMap contributors。茂木・戸町・樺島・小浜は長崎港参考、大村湾は佐世保港の簡易補正値です。移動時間は概算です。実際の潮・風・波・立入可否は現地でご確認ください。
+  潮汐：気象庁潮位予測データを利用（取得できない場合は独自推算）｜天気：Open-Meteo｜地図・住所検索：© OpenStreetMap contributors。茂木・戸町・小浜・樺島は近隣地点を参考にした補正値、大村湾は佐世保港を基にした独自補正の参考値です。移動時間は直線距離からの概算です。実際の潮・風・波・立入可否は現地でご確認ください。
 </footer>
 
 <script>
@@ -586,6 +662,20 @@ let _weatherRequestSeq = 0;
 const MAX_FUTURE_DAYS = 370;
 const _maxRateCache = new Map();
 const _tideEventsCache = new Map();
+const _dayScoreCache = new Map();
+// カレンダー用：その日の釣れどき指数の最高点（20分刻みで走査）。土日プランナーと数字が揃う。
+function dayBestScore(date){
+  const t0=new Date(date); t0.setHours(0,0,0,0);
+  const key=`${selectedAreaId}|${t0.getTime()}|${_isOfficialForDate(t0)?'o':'e'}`;
+  if(_dayScoreCache.has(key)) return _dayScoreCache.get(key);
+  let best=0;
+  for(let m=0;m<24*60;m+=20){
+    const sc=fishScore(new Date(t0.getTime()+m*60000)).score;
+    if(sc>best) best=sc;
+  }
+  _dayScoreCache.set(key,best);
+  return best;
+}
 
 function _stationForArea(areaId){
   if(areaId==='hirado') return 'X2';
@@ -601,7 +691,7 @@ function _setHealth(id,text,state=''){
   const el=document.getElementById(id); if(!el) return;
   el.textContent=text; el.className='health-pill'+(state?' '+state:'');
 }
-function _clearScoreCaches(){ _maxRateCache.clear(); _tideEventsCache.clear(); }
+function _clearScoreCaches(){ _maxRateCache.clear(); _tideEventsCache.clear(); _dayScoreCache.clear(); }
 function maxTideRateForDay(d){
   const t0=new Date(d); t0.setHours(0,0,0,0);
   const key=`${selectedAreaId}|${t0.getTime()}|${_isOfficialForDate(t0)?'official':'estimate'}`;
@@ -847,10 +937,10 @@ function lunarAge(d){
 }
 function tideType(d){
   const a=lunarAge(d);
-  if(a<=2 || a>=27.5 || (a>=12.5&&a<=16.5)) return{name:'大潮相当',cls:'b-spring',tip:'大潮相当：潮の動きが大きくチャンスが多い日'};
-  if((a>=8.5&&a<=9.5)||(a>=22.5&&a<=23.5)) return{name:'長潮相当',cls:'b-longcho',tip:'長潮相当：潮が最も緩む日。場所選びが重要'};
-  if((a>=9.5&&a<=10.5)||(a>=23.5&&a<=24.5)) return{name:'若潮相当',cls:'b-neap',tip:'若潮相当：これから潮が大きくなっていくタイミング'};
-  if((a>=5.5&&a<=8.5)||(a>=18.5&&a<=22.5)) return{name:'小潮相当',cls:'b-neap',tip:'小潮相当：潮の動きは小さめ。転流前後を狙う'};
+  if(a<2 || a>=28 || (a>=13&&a<17)) return{name:'大潮相当',cls:'b-spring',tip:'大潮相当：潮の動きが大きくチャンスが多い日'};
+  if((a>=9&&a<10)||(a>=24&&a<25)) return{name:'長潮相当',cls:'b-longcho',tip:'長潮相当：潮が最も緩む日。場所選びが重要'};
+  if((a>=10&&a<11)||(a>=25&&a<26)) return{name:'若潮相当',cls:'b-neap',tip:'若潮相当：これから潮が大きくなっていくタイミング'};
+  if((a>=6&&a<9)||(a>=21&&a<24)) return{name:'小潮相当',cls:'b-neap',tip:'小潮相当：潮の動きは小さめ。転流前後を狙う'};
   return{name:'中潮相当',cls:'b-mid',tip:'中潮相当：適度に潮が動き、釣果に期待できる日'};
 }
 
@@ -990,6 +1080,11 @@ function fishScore(d,options={}){
   const maxRaw=(includeWeather&&cw)?115:100;
   let _finalScore=Math.max(0,Math.round(Math.min(score,maxRaw)/(maxRaw/100)));
   if(cw&&(_wms>=10||cw.rain>=10)){ _finalScore=Math.min(_finalScore,39); }
+  // 内訳の合計を最終表示スコアに一致させる（生スコアは天気込み最大115点を100点満点へ換算するため差が出る）
+  const _dispSum=bd.reduce((s,it)=>s+it.p,0);
+  const _adj=_finalScore-_dispSum;
+  if(_adj!==0) bd.push({l:'100点満点換算',p:_adj,adj:true});
+  bd.push({l:'合計',p:_finalScore,total:true});
   return{score:_finalScore,bd,rate,dir,h,nt,cw};
 }
 
@@ -1049,7 +1144,7 @@ function buildReason(d,rate,dir,nt){
 }
 
 function ft(d){return `${p2(d.getHours())}:${p2(d.getMinutes())}`;}
-function sColor(s){return s>=80?'#2ecc71':s>=65?'#f39c12':s>=45?'#e67e22':'#7f8c8d';}
+function sColor(s){return s>=80?'#1f9d57':s>=65?'#d9820a':s>=45?'#c4690f':'#6b7780';}
 function sLabel(s){return s>=80?'◎ チャンス大':s>=65?'○ なかなか良い':s>=45?'△ 場所次第':'✕ 散歩気分で';}
 
 // ========================================================
@@ -1123,13 +1218,13 @@ async function fetchWeather(){
   console.error('天気取得全失敗:', _lastErr?.message);
   weatherData=null; _setHealth('weather-health','⛅ 天気：取得失敗','bad');
   const ws=document.getElementById('wstrip');
-  if(ws) ws.innerHTML=`<div style="padding:10px 14px;font-size:.72rem;color:#c0392b">天気取得失敗：${_lastErr?.message||'不明'}<br><span style="opacity:.7">（潮汐データは正常動作中）</span></div>`;
+  if(ws) ws.innerHTML=`<div style="padding:10px 14px;font-size:.72rem;color:#a52f22">天気取得失敗：${_lastErr?.message||'不明'}<br><span style="opacity:.7">（潮汐データは正常動作中）</span></div>`;
   const fd=document.getElementById('fc-days');
-  if(fd) fd.innerHTML='<div style="padding:10px;font-size:.72rem;color:#7eb8d4">天気データなし（潮汐のみ表示中）</div>';
+  if(fd) fd.innerHTML='<div style="padding:10px;font-size:.72rem;color:#4a7188">天気データなし（潮汐のみ表示中）</div>';
 }
 
 function renderWStrip(){
-  if(!weatherData){ const el=document.getElementById('wstrip'); if(el&&!el.textContent.includes('取得中')) el.innerHTML='<div style="padding:10px 4px;font-size:.73rem;color:#3a6a8a">天気データなし</div>'; return; }
+  if(!weatherData){ const el=document.getElementById('wstrip'); if(el&&!el.textContent.includes('取得中')) el.innerHTML='<div style="padding:10px 4px;font-size:.73rem;color:#5d7c90">天気データなし</div>'; return; }
   const now=new Date();
   const baseDay=selectedDay||_todayMidnight();
   const isBaseToday=(baseDay.toDateString()===now.toDateString());
@@ -1146,7 +1241,7 @@ function renderWStrip(){
     const temp=Math.round(weatherData.hourly.temperature_2m[i]);
     const wind=Math.round(weatherData.hourly.windspeed_10m[i]/3.6);
     const rain=weatherData.hourly.precipitation[i];
-    const _d0=baseDayStr,_d1=getDS(1,baseDay),_d2=getDS(2,baseDay); const dayTag=t.startsWith(_d0)?'':t.startsWith(_d1)?'<span style="color:#f39c12;font-size:.55rem">翌日</span>':'<span style="color:#e67e22;font-size:.55rem">翌々</span>';
+    const _d0=baseDayStr,_d1=getDS(1,baseDay),_d2=getDS(2,baseDay); const dayTag=t.startsWith(_d0)?'':t.startsWith(_d1)?'<span style="color:#d9820a;font-size:.55rem">翌日</span>':'<span style="color:#c4690f;font-size:.55rem">翌々</span>';
     html+=`<div class="wh${isNow?' now':''}"><div class="wt">${dayTag}${p2(hr)}時</div><div class="wi">${info.icon}</div><div class="wc">${temp}°</div><div class="ww">💨${wind}m/s</div>${rain>0?`<div class="wr">💧${rain}</div>`:''}</div>`;
     shown++;
   }
@@ -1215,7 +1310,7 @@ function renderBeginnerCard(){
   for(const {h, score} of hourScores){
     const div = document.createElement('div');
     div.className = 'hour-block' + (h === nowH ? ' now-block' : '');
-    const col = score>=80 ? '#2ecc71' : score>=65 ? '#f39c12' : score>=45 ? '#e67e22' : '#1a3050';
+    const col = score>=80 ? '#1f9d57' : score>=65 ? '#d9820a' : score>=45 ? '#c4690f' : '#aab8c6';
     div.style.background = col;
     div.style.opacity = score>=40 ? '1' : '0.5';
     if(h % 6 === 0){
@@ -1276,7 +1371,7 @@ function renderBeginnerCard(){
   const rankCls = ['rank1','rank2','rank3'];
 
   if(!wins.length){
-    listEl.innerHTML = '<div style="font-size:.82rem;color:#7eb8d4">この日は好条件が少ない日です。潮の動き出しを丁寧に狙いましょう。</div>';
+    listEl.innerHTML = '<div style="font-size:.82rem;color:#4a7188">この日は好条件が少ない日です。潮の動き出しを丁寧に狙いましょう。</div>';
     return;
   }
 
@@ -1285,7 +1380,7 @@ function renderBeginnerCard(){
     const sL=ft(w.s)+'頃';
     const sh=w.s.getHours();
     const _t1=sh>=19?'夜':sh>=15?'夕方':sh>=11?'昼':sh>=7?'午前':sh>=4?'未明':sh>=0?'深夜':'深夜'; const eh2=(w.e.getHours()===0?24:w.e.getHours())-1; const _t2=eh2>=19?'夜':eh2>=15?'夕方':eh2>=11?'昼':eh2>=7?'午前':eh2>=4?'未明':eh2>=0?'深夜':'深夜'; const tod=_t1===_t2?_t1:_t1+'〜'+_t2;
-    const nowTag=isCurrent?'<span style="color:#2ecc71;font-size:.7rem">← 今ここ！</span>':'';
+    const nowTag=isCurrent?'<span style="color:#1f9d57;font-size:.7rem">← 今ここ！</span>':'';
     const item=document.createElement('div');
     item.className=`bt-item ${rCls}`; item.style.opacity=String(opacity);
     item.innerHTML=`<div class="bt-rank">${rankIcon}</div><div style="flex:1"><div class="bt-time">${tod} ${sL} 〜 ${eL} ${nowTag}</div><div class="bt-reason">${plainWindowReason(w.r,w.sc)}</div></div>`;
@@ -1298,13 +1393,13 @@ function renderBeginnerCard(){
     const nowWin=isToday?futureWins.find(w=>w.s<=now&&w.e>now):null;
     if(nowWin){
       const nb=document.createElement('div');
-      nb.style.cssText='background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.35);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:.8rem;color:#2ecc71;font-weight:600;';
+      nb.style.cssText='background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.35);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:.8rem;color:#1f9d57;font-weight:600;';
       nb.innerHTML=`⬇ 今から行くなら　<span style="font-size:.95rem;">${ft(nowWin.s)}〜${nowWin.e.getHours()===0?'24:00':ft(nowWin.e)}</span>（現在進行中）`;
       listEl.appendChild(nb);
     }
     if(isToday&&pastWins.length){
       const hdr=document.createElement('div');
-      hdr.style.cssText='font-size:.68rem;color:#7dccff;font-weight:600;margin:4px 0 6px';
+      hdr.style.cssText='font-size:.68rem;color:#1670b5;font-weight:600;margin:4px 0 6px';
       hdr.textContent='⬇ これからのベスト'; listEl.appendChild(hdr);
     }
     futureWins.forEach((w,i)=>{
@@ -1313,12 +1408,12 @@ function renderBeginnerCard(){
     });
   } else if(isToday){
     const msg=document.createElement('div');
-    msg.style.cssText='font-size:.82rem;color:#7eb8d4;margin-bottom:4px';
+    msg.style.cssText='font-size:.82rem;color:#4a7188;margin-bottom:4px';
     msg.textContent='今日の好条件は全て終了しました。明日をお楽しみに！'; listEl.appendChild(msg);
   }
   if(pastWins.length){
     const hdr=document.createElement('div');
-    hdr.style.cssText='font-size:.65rem;color:#445566;font-weight:600;margin:10px 0 4px';
+    hdr.style.cssText='font-size:.65rem;color:#5a6a78;font-weight:600;margin:10px 0 4px';
     hdr.textContent='本日の好条件（終了済み）'; listEl.appendChild(hdr);
     pastWins.forEach(w=>listEl.appendChild(_renderWin(w,' ','rank3',0.30,false)));
   }
@@ -1433,10 +1528,21 @@ function renderAll(){
 
   const bdEl=document.getElementById('bd-rows'); bdEl.innerHTML='';
   for(const item of bd){
+    if(item.adj){
+      const el=document.createElement('div'); el.className='bd-row';
+      el.innerHTML=`<span class="bd-label" style="color:#4a7188">${item.l}</span><div class="bd-bar-w"><div class="bd-bar" style="width:100%;background:#b6c4d2"></div></div><span class="bd-pts" style="color:#4a7188">${item.p>=0?'+':''}${item.p}点</span>`;
+      bdEl.appendChild(el); continue;
+    }
+    if(item.total){
+      const el=document.createElement('div'); el.className='bd-row';
+      el.style.borderTop='1px solid #cdddea'; el.style.marginTop='5px'; el.style.paddingTop='8px';
+      el.innerHTML=`<span class="bd-label" style="font-weight:700;color:#14283b">合計（最終スコア）</span><span class="bd-pts" style="color:#1c8a4d;font-size:.86rem;font-weight:800">${item.p}点</span>`;
+      bdEl.appendChild(el); continue;
+    }
     const pct=Math.max(0,(item.p/item.m)*100);
-    const col=item.pen?'#e74c3c':item.p>=item.m*.7?'#2ecc71':item.p>=item.m*.4?'#f39c12':'#7f8c8d';
+    const col=item.pen?'#d63b2b':item.p>=item.m*.7?'#1f9d57':item.p>=item.m*.4?'#d9820a':'#6b7780';
     const el=document.createElement('div'); el.className='bd-row';
-    el.innerHTML=`<span class="bd-label">${item.l}</span><div class="bd-bar-w"><div class="bd-bar" style="width:${pct}%;background:${col}"></div></div><span class="bd-pts" style="color:${item.pen?'#e74c3c':'#7dccff'}">${item.p>=0?'+':''}${item.p}点</span>`;
+    el.innerHTML=`<span class="bd-label">${item.l}</span><div class="bd-bar-w"><div class="bd-bar" style="width:${pct}%;background:${col}"></div></div><span class="bd-pts" style="color:${item.pen?'#d63b2b':'#1670b5'}">${item.p>=0?'+':''}${item.p}点</span>`;
     bdEl.appendChild(el);
   }
 
@@ -1452,7 +1558,7 @@ function renderAll(){
 
   const winEl=document.getElementById('win-list'); winEl.innerHTML='';
   const wins=bestWindows(dayRef);
-  if(!wins.length) winEl.innerHTML='<div style="color:#7eb8d4;font-size:.78rem">転流前後を丁寧に狙いましょう</div>';
+  if(!wins.length) winEl.innerHTML='<div style="color:#4a7188;font-size:.78rem">転流前後を丁寧に狙いましょう</div>';
   for(const w of wins){
     const good=w.sc>=65; const el=document.createElement('div');
     const isSelected = selectedWinMs===w.s.getTime();
@@ -1487,10 +1593,10 @@ function renderTomorrow(){
   const tt=tideType(tom);
   const el=document.getElementById('tomorrow-list'); el.innerHTML='';
   const header=document.createElement('div');
-  header.innerHTML=`<div style="font-size:.72rem;color:#7eb8d4;margin-bottom:8px">明日 ${tom.getMonth()+1}月${tom.getDate()}日 <span class="badge ${tt.cls}" style="font-size:.65rem;padding:2px 6px;border-radius:8px;">${tt.name}</span></div>`;
+  header.innerHTML=`<div style="font-size:.72rem;color:#4a7188;margin-bottom:8px">明日 ${tom.getMonth()+1}月${tom.getDate()}日 <span class="badge ${tt.cls}" style="font-size:.65rem;padding:2px 6px;border-radius:8px;">${tt.name}</span></div>`;
   el.appendChild(header);
   
-  if(!wins.length){el.innerHTML+='<div style="font-size:.78rem;color:#7eb8d4">好条件の時間帯は少ない日です</div>';return;}
+  if(!wins.length){el.innerHTML+='<div style="font-size:.78rem;color:#4a7188">好条件の時間帯は少ない日です</div>';return;}
   for(const w of wins){
     const eL=w.e.getHours()===0?'24:00':ft(w.e);
     const item=document.createElement('div'); item.className='tomorrow-item';
@@ -1504,7 +1610,7 @@ function renderTomorrow(){
 // ========================================================
 function renderWeekends(){
   const el=document.getElementById('weekend-planner'); el.innerHTML='';
-  el.innerHTML='<div style="font-size:.65rem;color:#3a6a8a;margin-bottom:8px;line-height:1.4;">※16日先までは潮汐・まずめ・風・降水を反映。それ以降は潮汐・まずめのみの参考指数です。</div>';
+  el.innerHTML='<div style="font-size:.65rem;color:#5d7c90;margin-bottom:8px;line-height:1.4;">※16日先までは潮汐・まずめ・風・降水を反映。それ以降は潮汐・まずめのみの参考指数です。</div>';
   const now=new Date(); now.setHours(0,0,0,0);
   const weekends=[]; let d=new Date(now);
   while(weekends.length<4){
@@ -1656,14 +1762,13 @@ function _renderCalendar(){
     const isToday = diffDays === 0;
     const isSelected = selectedDay && date.getTime()===selectedDay.getTime();
 
-    // 釣れどき指数（正午）
-    const noon = new Date(_dpYear, _dpMonth, d, 12, 0, 0);
-    const sc = fishScore(noon).score;
+    // 釣れどき指数（その日の最高点。正午固定では夕まずめ等の好条件を見落とすため）
+    const sc = dayBestScore(new Date(_dpYear, _dpMonth, d));
     const scoreCol = sColor(sc);
 
     const el=document.createElement('button');
     el.className='dp-day'+(isToday?' today':'')+(isSelected?' selected':'')+(isPast?' past':'')+(isTooFar?' out':'');
-    el.innerHTML=`<div>${d}</div><div class="dp-score" style="color:${isSelected?'#cef':scoreCol}">${sc}点</div>`;
+    el.innerHTML=`<div>${d}</div><div class="dp-score" style="color:${isSelected?'#ffffff':scoreCol}">${sc}点</div>`;
 
     if(!isPast&&!isTooFar){
       el.onclick=()=>{
@@ -1689,6 +1794,15 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 let _nominatimLastAt=0;
+function _capGeoCache(max){
+  try{
+    const pref='tsuredoki-geo:', items=[];
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf(pref)===0){ let at=0; try{ at=(JSON.parse(localStorage.getItem(k))||{}).at||0; }catch(_e){} items.push([k,at]); } }
+    if(items.length<=max) return;
+    items.sort((a,b)=>a[1]-b[1]);
+    for(let i=0;i<items.length-max;i++) localStorage.removeItem(items[i][0]);
+  }catch(_e){}
+}
 async function _nominatimSearch(query){
   const cacheKey='tsuredoki-geo:'+query.toLowerCase();
   try{ const cached=JSON.parse(localStorage.getItem(cacheKey)||'null'); if(cached&&Date.now()-cached.at<30*86400000) return cached.data; }catch(_e){}
@@ -1701,7 +1815,8 @@ async function _nominatimSearch(query){
     const r=await fetch(url,{signal:ctrl.signal});
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const data=await r.json();
-    try{localStorage.setItem(cacheKey,JSON.stringify({at:Date.now(),data}));}catch(_e){}
+    try{ localStorage.setItem(cacheKey,JSON.stringify({at:Date.now(),data})); _capGeoCache(50); }
+    catch(_e){ try{ _capGeoCache(20); localStorage.setItem(cacheKey,JSON.stringify({at:Date.now(),data})); }catch(_e2){} }
     return data;
   }finally{clearTimeout(tid);}
 }
@@ -1784,13 +1899,13 @@ async function renderDepartAdvice(){
 
     let mainLine='', subLine='';
     if(scNow>=72||m<=10){
-      mainLine=`<span style="color:#7dffb3;font-weight:700">✅ 今すぐ出発！</span> ${ft(arriveNow)}着 → スコア <b style="color:#2ecc71">${scNow}点</b>`;
+      mainLine=`<span style="color:#1c8a4d;font-weight:700">✅ 今すぐ出発！</span> ${ft(arriveNow)}着 → スコア <b style="color:#1f9d57">${scNow}点</b>`;
       subLine='今がベストに近い時間帯です。';
     } else if(m<=120){
-      mainLine=`<span style="color:#f39c12;font-weight:700">⏰ ${ft(best.depart)} 出発</span>（今から${m}分後）`;
-      subLine=`${ft(best.arrive)}着でスコア <b style="color:#f39c12">${best.score}点</b> のタイミング`;
+      mainLine=`<span style="color:#d9820a;font-weight:700">⏰ ${ft(best.depart)} 出発</span>（今から${m}分後）`;
+      subLine=`${ft(best.arrive)}着でスコア <b style="color:#d9820a">${best.score}点</b> のタイミング`;
     } else {
-      mainLine=`今日のベスト出発は <b style="color:#fff">${ft(best.depart)}</b>（今から${m}分後）`;
+      mainLine=`今日のベスト出発は <b style="color:#14283b">${ft(best.depart)}</b>（今から${m}分後）`;
       subLine=`${ft(best.arrive)}着でスコア${best.score}点。今すぐだと到着時${scNow}点。`;
     }
 
@@ -1805,7 +1920,7 @@ async function renderDepartAdvice(){
         <span class="da-chevron">▼</span>
       </button>
       <div class="da-detail">
-        <div class="da-drive">🚗 概算約<b style="color:#fff">${drLabel}</b>（直線${Math.round(sp.dist)}km）</div>
+        <div class="da-drive">🚗 概算約<b style="color:#14283b">${drLabel}</b>（直線${Math.round(sp.dist)}km）</div>
         <div class="da-advice-main">${mainLine}</div>
         <div class="da-advice-sub">${subLine}</div>
         <div class="da-fish">🐟 ${sp.fish.join('・')}</div>
@@ -1841,7 +1956,7 @@ function drawCurve(now){
   const toX=x=>LABEL_W+x*plotW;
   const t0=new Date(now); t0.setHours(0,0,0,0);
 
-  ctx.fillStyle='#071525'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#f1f6fb'; ctx.fillRect(0,0,W,H);
 
   // ── 上段：潮汐曲線 ──
   const pts=[];
@@ -1855,9 +1970,9 @@ function drawCurve(now){
   for(let cm=Math.ceil(minCm/gridStep)*gridStep; cm<=maxCm+10; cm+=gridStep){
     const h=cm/100, y=toY(h);
     if(y<TIDE_TOP-2||y>TIDE_TOP+TIDE_H+2) continue;
-    ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(0,0,0,.07)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(LABEL_W,y); ctx.lineTo(W,y); ctx.stroke();
-    ctx.fillStyle='#3a6a8a'; ctx.fillText(cm+'cm',LABEL_W-3,y+3);
+    ctx.fillStyle='#5d7c90'; ctx.fillText(cm+'cm',LABEL_W-3,y+3);
   }
   ctx.textAlign='left';
 
@@ -1872,7 +1987,7 @@ function drawCurve(now){
   // 潮汐ライン
   ctx.beginPath(); ctx.moveTo(toX(pts[0].x),toY(pts[0].h));
   for(let i=1;i<pts.length;i++) ctx.lineTo(toX(pts[i].x),toY(pts[i].h));
-  ctx.strokeStyle='#2980b9'; ctx.lineWidth=2; ctx.stroke();
+  ctx.strokeStyle='#2176b8'; ctx.lineWidth=2; ctx.stroke();
 
   // 満干潮マーク
   const tides=findTides(now);
@@ -1880,9 +1995,9 @@ function drawCurve(now){
   for(const t of tides){
     const tx=toX((t.time.getHours()*60+t.time.getMinutes())/(24*60));
     const ty=toY(t.h); const isHigh=t.type==='high';
-    ctx.fillStyle=isHigh?'#7dccff':'#ffb07d'; ctx.textAlign='center';
+    ctx.fillStyle=isHigh?'#1670b5':'#b3590f'; ctx.textAlign='center';
     ctx.fillText(isHigh?'▲':'▽', tx, isHigh?ty-4:ty+10);
-    ctx.fillStyle='#7eb8d4'; ctx.fillText(ft(t.time), tx, isHigh?ty-13:ty+20);
+    ctx.fillStyle='#4a7188'; ctx.fillText(ft(t.time), tx, isHigh?ty-13:ty+20);
   }
   ctx.textAlign='left';
 
@@ -1918,12 +2033,12 @@ function drawCurve(now){
   }
 
   // 区切り線
-  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1; ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(0,0,0,.10)'; ctx.lineWidth=1; ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(LABEL_W,SEP_Y); ctx.lineTo(W,SEP_Y); ctx.stroke();
 
   // ── 下段：釣れどき指数バー ──
   // ラベル
-  ctx.font='bold 8px sans-serif'; ctx.fillStyle='#f1c40f'; ctx.textAlign='left';
+  ctx.font='bold 8px sans-serif'; ctx.fillStyle='#b8890a'; ctx.textAlign='left';
   ctx.fillText('⭐釣れどき', 1, SCORE_TOP+10);
 
   const hourScores=[];
@@ -1943,16 +2058,16 @@ function drawCurve(now){
     const bh=Math.round((sc/100)*SCORE_H);
     const x=toX(h/24);
     const inSelected=selectedWinMs&&h>=selStartH&&h<selEndH;
-    const _sc=sColor(sc); const col=_sc==='#2ecc71'?'#2ecc71':_sc==='#f39c12'?'#f39c12':_sc==='#e67e22'?'#2980b9':'#1a3050';
+    const _sc=sColor(sc); const col=_sc==='#1f9d57'?'#1f9d57':_sc==='#d9820a'?'#d9820a':_sc==='#c4690f'?'#2176b8':'#aab8c6';
     // バー背景
-    ctx.fillStyle=inSelected?'rgba(255,255,255,.10)':'rgba(255,255,255,.03)';
+    ctx.fillStyle=inSelected?'rgba(0,0,0,.05)':'rgba(0,0,0,.02)';
     ctx.fillRect(x+1,SCORE_TOP,BAR_W-2,SCORE_H);
     // バー本体（選択外は暗く）
-    ctx.fillStyle=selectedWinMs&&!inSelected?'rgba(100,100,100,.3)':col;
+    ctx.fillStyle=selectedWinMs&&!inSelected?'rgba(0,0,0,.15)':col;
     ctx.fillRect(x+1,SCORE_TOP+SCORE_H-bh,BAR_W-2,bh);
     // 選択中or75以上で数値表示
     if(sc>=57&&(inSelected||!selectedWinMs)){
-      ctx.font='bold 8px sans-serif'; ctx.fillStyle=inSelected?'#fff':'rgba(255,255,255,.7)';
+      ctx.font='bold 8px sans-serif'; ctx.fillStyle=inSelected?'#14283b':'rgba(0,0,0,.55)';
       ctx.textAlign='center';
       ctx.fillText(sc, x+BAR_W/2, SCORE_TOP+SCORE_H-bh-2);
     }
@@ -1965,8 +2080,8 @@ function drawCurve(now){
   if(_isTodayGraph){
     const nx=toX((_realNow.getHours()*60+_realNow.getMinutes())/(24*60));
     ctx.beginPath(); ctx.moveTo(nx,TIDE_TOP); ctx.lineTo(nx,SCORE_TOP+SCORE_H);
-    ctx.strokeStyle='#2ecc71'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='#2ecc71'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+    ctx.strokeStyle='#1f9d57'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#1f9d57'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
     ctx.fillText('今', nx, SCORE_TOP+SCORE_H+11);
   }
 
@@ -1974,11 +2089,11 @@ function drawCurve(now){
   ctx.font='9px sans-serif';
   for(const hr of [0,6,12,18]){
     const x=toX(hr/24);
-    ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(x,TIDE_TOP,1,TIDE_H);
-    ctx.fillStyle='#3a6a8a'; ctx.textAlign='left';
+    ctx.fillStyle='rgba(0,0,0,.07)'; ctx.fillRect(x,TIDE_TOP,1,TIDE_H);
+    ctx.fillStyle='#5d7c90'; ctx.textAlign='left';
     ctx.fillText(hr+':00', x+2, TIME_Y);
   }
-  ctx.textAlign='right'; ctx.fillStyle='#3a6a8a';
+  ctx.textAlign='right'; ctx.fillStyle='#5d7c90';
   ctx.fillText('24:00', W, TIME_Y);
   ctx.textAlign='left';
 }
@@ -2007,7 +2122,7 @@ function selectArea(id){
   weatherData=weatherCache[cacheKey]||null;
   Object.keys(_sunCache).forEach(k=>delete _sunCache[k]);
   if(!weatherData){
-    const ws=document.getElementById('wstrip'); if(ws) ws.innerHTML='<div style="padding:10px 4px;font-size:.73rem;color:#3a6a8a">天気データ取得中...</div>';
+    const ws=document.getElementById('wstrip'); if(ws) ws.innerHTML='<div style="padding:10px 4px;font-size:.73rem;color:#5d7c90">天気データ取得中...</div>';
     const fd=document.getElementById('fc-days'); if(fd) fd.innerHTML='';
   }
   document.querySelectorAll('#area-selector button').forEach(b=>{const on=b.dataset.area===id;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
@@ -2076,7 +2191,7 @@ function renderMapMarkers(){
     const col=sColor(sc), sz=sc>=80?36:sc>=65?30:sc>=45?26:22;
     const icon=L.divIcon({
       className:'',
-      html:`<div style="background:${col};color:#fff;border-radius:50%;width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;font-size:${sz===34?15:13}px;box-shadow:0 2px 8px rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.35); transition:.2s;">${sp.icon}</div>`,
+      html:`<div style="background:${col};color:#14283b;border-radius:50%;width:${sz}px;height:${sz}px;display:flex;align-items:center;justify-content:center;font-size:${sz===34?15:13}px;box-shadow:0 2px 8px rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.35); transition:.2s;">${sp.icon}</div>`,
       iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]
     });
     const marker=L.marker([sp.lat,sp.lng],{icon}).addTo(leafletMap);
@@ -2148,6 +2263,60 @@ function showSpotPanel(sp){
 // ========================================================
 // BOOT
 // ========================================================
+function enhanceMobileUI(){
+  const grid=document.querySelector('.grid'); if(!grid||grid.dataset.acc) return; grid.dataset.acc='1';
+  const isMobile=window.matchMedia('(max-width:600px)').matches;
+  const cards=[...grid.querySelectorAll(':scope > .card')];
+  const titleFor=(card)=>{
+    if(card.id==='weather-card') return ['⛅ 天気予報',false];
+    if(card.id==='forecast-main-card') return ['🎣 今日、いつ行けばいい？',true];
+    if(card.querySelector('#detail-section')) return ['📊 詳細データ（潮位・干満・スコア内訳）',false];
+    if(card.classList.contains('map-card')) return ['🗺️ ポイントマップ',false];
+    if(card.querySelector('#loc-input')) return ['🚗 出発アドバイス',false];
+    if(card.querySelector('#tomorrow-list')) return ['📅 明日のベストタイム',false];
+    if(card.querySelector('#weekend-planner')) return ['🗓️ 土日プランナー（4週分）',false];
+    return ['セクション',false];
+  };
+  const refresh=(card)=>{
+    if(card.classList.contains('map-card')&&leafletMap){ setTimeout(()=>leafletMap.invalidateSize(),60); }
+    if(card.querySelector('#detail-section')){ setTimeout(()=>drawCurve(selectedDay||new Date()),60); }
+  };
+  const setState=(card,open)=>{
+    card.classList.toggle('collapsed',!open);
+    const head=card.querySelector(':scope > .acc-head');
+    if(head){ head.setAttribute('aria-expanded',String(open)); const hint=head.querySelector('.acc-hint'); if(hint) hint.textContent=open?'閉じる':'開く'; }
+    if(open) refresh(card);
+  };
+  cards.forEach(card=>{
+    const [title,openDefault]=titleFor(card);
+    const body=document.createElement('div'); body.className='acc-body';
+    while(card.firstChild) body.appendChild(card.firstChild);
+    const closeBtn=document.createElement('button'); closeBtn.type='button'; closeBtn.className='acc-close';
+    closeBtn.innerHTML='▴ このセクションを閉じる';
+    body.appendChild(closeBtn);
+    const head=document.createElement('button'); head.type='button'; head.className='acc-head';
+    head.innerHTML='<span class="acc-title">'+title+'</span><span class="acc-state"><span class="acc-hint"></span><span class="acc-chev" aria-hidden="true">▾</span></span>';
+    card.appendChild(head); card.appendChild(body); card.classList.add('acc');
+    const startOpen=openDefault||!isMobile;
+    card.classList.toggle('collapsed',!startOpen);
+    head.setAttribute('aria-expanded',String(startOpen));
+    head.querySelector('.acc-hint').textContent=startOpen?'閉じる':'開く';
+    head.addEventListener('click',()=>setState(card,card.classList.contains('collapsed')));
+    closeBtn.addEventListener('click',()=>{ setState(card,false); if(head.scrollIntoView) head.scrollIntoView({block:'nearest',behavior:'smooth'}); });
+  });
+  const bar=document.createElement('div'); bar.className='acc-toolbar full';
+  bar.innerHTML='<button type="button" id="acc-openall">▾ 全て開く</button><button type="button" id="acc-closeall">▴ 全て閉じる</button>';
+  grid.insertBefore(bar,grid.firstChild);
+  bar.querySelector('#acc-openall').addEventListener('click',()=>{ cards.forEach(c=>setState(c,true)); });
+  bar.querySelector('#acc-closeall').addEventListener('click',()=>{ cards.forEach(c=>setState(c,false)); window.scrollTo({top:0,behavior:'smooth'}); });
+}
+function setupBetaToggle(){
+  const bn=document.querySelector('.beta-notice'); if(!bn) return;
+  // 注意書きは重要度が低く邪魔なので、ページ最下部（フッター直前）へ移動
+  const footer=document.querySelector('footer');
+  if(footer&&footer.parentNode){ bn.style.margin='14px'; bn.style.cursor='default'; bn.classList.remove('clamped'); footer.parentNode.insertBefore(bn, footer); }
+}
+
 window.addEventListener('DOMContentLoaded',async()=>{
   selectedDay = _todayMidnight();
   try{ const saved=localStorage.getItem('tsuredoki-area'); if(AREAS.some(a=>a.id===saved)) selectedAreaId=saved; }catch(_e){}
@@ -2161,6 +2330,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   const [jmaResult]=await Promise.allSettled([initJMA(),fetchWeather()]);
   if(jmaResult.status==='fulfilled'&&jmaResult.value){ renderAll(); renderBeginnerCard(); _updateTideSourceLabel(); }
   renderWStrip(); renderFcDays(); renderAll();
+  enhanceMobileUI(); setupBetaToggle();
   setInterval(()=>{renderAll();renderMapMarkers();},5*60*1000);
 });
 </script>
