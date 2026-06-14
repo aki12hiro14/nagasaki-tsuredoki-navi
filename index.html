@@ -110,7 +110,7 @@ header { background:linear-gradient(135deg,#ffffff,#2c93cf); padding:14px 18px 8
 .wd-date { font-size:.82rem; font-weight:700; color:#14283b; }
 .wd-ttype { font-size:.65rem; padding:1px 6px; border-radius:8px; display:inline-block; margin:3px 0; }
 .wd-best { font-size:.8rem; color:#1c8a4d; font-weight:600; }
-.wd-score { font-size:.72rem; color:#d9820a; }
+.wd-score { font-size:.74rem; color:#d9820a; font-weight:700; }
 .wd-reason { font-size:.68rem; color:#3f6378; margin-top:2px; line-height:1.35; }
 .weekend-section { margin-bottom:10px; }
 .weekend-header { font-size:.75rem; color:#4a7188; margin-bottom:5px; font-weight:600; }
@@ -121,7 +121,7 @@ header { background:linear-gradient(135deg,#ffffff,#2c93cf); padding:14px 18px 8
 .tide-row.next{background:#e6edf4;margin:0 -8px;padding:5px 8px;border-radius:6px;} .tide-row.next .tm{color:#1c8a4d;}
 
 /* おすすめ時間帯 */
-.win-item { background:#f1f6fb; border-radius:9px; padding:9px 11px; margin-bottom:7px; border-left:4px solid #1f9d57; }
+.win-item { background:#f1f6fb; border-radius:9px; padding:9px 11px; margin-bottom:7px; border:1px solid #cdddea; border-left:4px solid #1f9d57; display:flex; align-items:center; gap:8px; }
 .win-item.ok{border-left-color:#d9820a;} .win-time{font-size:.88rem;font-weight:700;} .win-reason{font-size:.72rem;color:#3f6378;margin-top:3px;}
 .win-score{float:right;font-size:.77rem;font-weight:700;padding:2px 7px;border-radius:9px;background:#d4f1e0;color:#1c8a4d;}
 .win-score.ok{background:#f3e7c9;color:#996b16;}
@@ -245,6 +245,11 @@ header { background:linear-gradient(135deg,#ffffff,#2c93cf); padding:14px 18px 8
 .win-item{cursor:pointer;transition:border-left-color .15s,background .15s;}
 .win-item:hover{background:#ffffff;}
 .win-item.selected{border-left-color:#14283b;background:#e6edf4;box-shadow:0 0 0 1px rgba(255,255,255,.15);}
+.win-body{flex:1;min-width:0;}
+.win-chev{flex-shrink:0;color:#9fb1c2;font-size:1.4rem;font-weight:700;line-height:1;transition:color .15s,transform .15s;}
+.win-item:hover .win-chev,.win-item.selected .win-chev{color:#2176b8;transform:translateX(2px);}
+.win-item:active{transform:scale(.992);}
+.win-item.selected .win-chev::after{content:" 表示中";font-size:.6rem;color:#2176b8;font-weight:700;}
 .tide-legend{display:flex;gap:0;margin-bottom:6px;border-radius:6px;overflow:hidden;font-size:.73rem;font-weight:700;}
 .tide-legend-tide{flex:1;background:#dbeaf6;color:#1670b5;text-align:center;padding:4px 0;}
 .tide-legend-bi{flex:1;background:#f3e3a8;color:#b8890a;text-align:center;padding:4px 0;}
@@ -451,7 +456,7 @@ header{ background:linear-gradient(135deg,#1f6fb0,#33a3d6); border-bottom:1px so
   </div>
 
   <div class="card full" id="forecast-main-card">
-    <div class="card-title" id="beginner-card-title">🎣 今日の釣り予報</div>
+    <div class="card-title" id="beginner-card-title">🎣 釣れどき（エリアを選択）</div>
     <div style="margin-bottom:12px;">
       <div style="font-size:.72rem;color:#4a7188;margin-bottom:6px;">📍 予報エリア選択</div>
       <div id="area-selector" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
@@ -510,7 +515,7 @@ header{ background:linear-gradient(135deg,#1f6fb0,#33a3d6); border-bottom:1px so
           <div id="tide-table"></div>
         </div>
         <div>
-          <div class="card-title">おすすめ時間帯</div>
+          <div class="card-title">おすすめ時間帯 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#5d7c90;font-size:.62rem;">👆 タップで潮位グラフに表示</span></div>
           <div id="win-list"></div>
         </div>
       </div>
@@ -1309,7 +1314,7 @@ function renderBeginnerCard(){
   const midnight = new Date(selectedDay);
 
   const titleEl = document.getElementById('beginner-card-title');
-  if(titleEl) titleEl.textContent = isToday ? '🐟 今日、いつ行けばいい？' : `🐟 ${_dayLabel(selectedDay)}の釣り予報`;
+  if(titleEl) titleEl.textContent = `🐟 ${_dayLabel(selectedDay)}の釣れどき`;
 
   const hourScores = [];
   for(let h=0; h<24; h++){
@@ -1577,7 +1582,7 @@ function renderAll(){
     const isSelected = selectedWinMs===w.s.getTime();
     el.className='win-item'+(good?'':' ok')+(isSelected?' selected':'');
     const eL=w.e.getHours()===0?'24:00':ft(w.e);
-    el.innerHTML=`<div><span class="win-score${good?'':' ok'}">${w.sc}点</span><span class="win-time">${ft(w.s)} 〜 ${eL}</span></div><div class="win-reason">${w.r}</div>`;
+    el.innerHTML=`<div class="win-body"><div><span class="win-score${good?'':' ok'}">${w.sc}点</span><span class="win-time">${ft(w.s)} 〜 ${eL}</span></div><div class="win-reason">${w.r}</div></div><span class="win-chev" aria-hidden="true">›</span>`;
     const wMs=w.s.getTime();
     el.onclick=()=>{
       selectedWinMs = selectedWinMs===wMs ? null : wMs;
@@ -1621,6 +1626,8 @@ function renderTomorrow(){
 // ========================================================
 // 土日プランナー
 // ========================================================
+// 土日プランナーのスコア配色：90+赤 / 80-89オレンジ / 79以下 水色
+function wkColor(s){ return s>=90?'#e0392b':s>=80?'#d9820a':'#2a9fd6'; }
 function renderWeekends(){
   const el=document.getElementById('weekend-planner'); el.innerHTML='';
   el.innerHTML='<div style="font-size:.65rem;color:#5d7c90;margin-bottom:8px;line-height:1.4;">※16日先までは潮汐・まずめ・風・降水を反映。それ以降は潮汐・まずめのみの参考指数です。</div>';
@@ -1644,7 +1651,7 @@ function renderWeekends(){
     const maxSc=Math.max(satBest,sunBest);
 
     const headerEl=document.createElement('div'); headerEl.className='weekend-header';
-    headerEl.innerHTML=`${wk.sat.getMonth()+1}/${wk.sat.getDate()}(土)〜${wk.sun.getMonth()+1}/${wk.sun.getDate()}(日) <span style="color:${sColor(maxSc)};font-size:.7rem;">最高 ${maxSc}点</span>`;
+    headerEl.innerHTML=`${wk.sat.getMonth()+1}/${wk.sat.getDate()}(土)〜${wk.sun.getMonth()+1}/${wk.sun.getDate()}(日) <span style="color:${wkColor(maxSc)};font-size:.7rem;font-weight:700;">最高 ${maxSc}点</span>`;
     section.appendChild(headerEl);
 
     const gridEl=document.createElement('div'); gridEl.className='weekend-grid';
@@ -1655,7 +1662,7 @@ function renderWeekends(){
       const tTypeHtml=`<span class="wd-ttype ${tt.cls}">${tt.name}</span>`;
       if(w){
         const eL=w.e.getHours()===0?'24:00':ft(w.e);
-        dayEl.innerHTML=`<div class="wd-label">${day}曜</div><div class="wd-date">${dat.getMonth()+1}/${dat.getDate()}</div>${tTypeHtml}<div class="wd-best">${ft(w.s)}頃〜${eL}頃</div><div class="wd-score">スコア ${w.sc}点</div><div class="wd-reason">${w.r}</div>`;
+        dayEl.innerHTML=`<div class="wd-label">${day}曜</div><div class="wd-date">${dat.getMonth()+1}/${dat.getDate()}</div>${tTypeHtml}<div class="wd-best">${ft(w.s)}頃〜${eL}頃</div><div class="wd-score" style="color:${wkColor(w.sc)}">スコア ${w.sc}点</div><div class="wd-reason">${w.r}</div>`;
       } else {
         dayEl.innerHTML=`<div class="wd-label">${day}曜</div><div class="wd-date">${dat.getMonth()+1}/${dat.getDate()}</div>${tTypeHtml}<div class="wd-reason">好条件少ない日</div>`;
       }
@@ -2281,8 +2288,8 @@ function enhanceMobileUI(){
   const isMobile=window.matchMedia('(max-width:600px)').matches;
   const cards=[...grid.querySelectorAll(':scope > .card')];
   const titleFor=(card)=>{
-    if(card.id==='weather-card') return ['⛅ 天気予報',false];
-    if(card.id==='forecast-main-card') return ['🎣 今日、いつ行けばいい？',true];
+    if(card.id==='weather-card') return ['📅 いつ行く？（日付＆天気）',false];
+    if(card.id==='forecast-main-card') return ['🎣 どこで釣る？（釣れどき）',true];
     if(card.querySelector('#detail-section')) return ['📊 詳細データ（潮位・干満・スコア内訳）',false];
     if(card.classList.contains('map-card')) return ['🗺️ ポイントマップ',false];
     if(card.querySelector('#loc-input')) return ['🚗 出発アドバイス',false];
